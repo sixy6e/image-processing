@@ -190,11 +190,6 @@ class Rasterise:
 
         return result
 
-    def _project():
-        """
-        
-        """
-
     def _rasterise():
         """
         
