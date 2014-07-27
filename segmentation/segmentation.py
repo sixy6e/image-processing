@@ -10,11 +10,28 @@ class SegmentVisitor:
     Given a segmented array, SegmentKeeper will find the segments and optionally
     calculate basic statistics. A value of zero is considered to be the background
     and ignored.
+
+    Example:
+        >>> seg_array = numpy.zeros((10,10), dtype='uint8')
+        >>> seg_array[0:3,0:3] = 1
+        >>> seg_array[0:3,7:10] = 2
+        >>> seg_array[7:10,0:3] = 3
+        >>> seg_array[7:10,7:10] = 4
+        >>> seg_ds = SegmentVisitor(seg_array)
+        >>> vals = numpy.arange(100).reshape((10,10))
+        >>> seg_ds.segmentMean(vals)
+        >>> seg_ds.segmentMax(vals)
+        >>> seg_ds.segmentMin(vals)
+        >>> seg_ds.getSegementData(vals, segmentID=2)
+        >>> seg_ds.getSegmentLocations(segmentID=3)
     """
 
     def __init__(self, array):
         """
-        
+        Initialises the SegmentVisitor class.
+
+        :param array:
+            A 2D NumPy array containing the segmented array.
         """
 
         assert array.ndim == 2, "Dimensions of array must be 2D!\n Supplied array is %i"%array.ndim
@@ -26,6 +43,9 @@ class SegmentVisitor:
 
         self.histogram = None
         self.ri        = None
+
+        self.min_segID = None
+        self.max_segID = None
 
     def _findSegements(self)
         """
