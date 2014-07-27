@@ -6,18 +6,18 @@ from osgeo import ogr
 from osgeo import osr
 
 
-def createMemoryDataset(name='MemoryDataset', samples, lines, bands=1, Projection=None, GeoTransform=None, dtype=gdal.GDT_UInt32):
+def createMemoryDataset(samples, lines, name='MemoryDataset', bands=1, Projection=None, GeoTransform=None, dtype=gdal.GDT_UInt32):
     """
     Creates a GDAL dataset contained entirely in memory (format type = "MEM").
-
-    :param name:
-        A string containing the name of the "in-memory" dataset.
 
     :param samples:
         An integer defining the number of samples for the dataset.
 
     :param lines:
         An integer defining the number of lines for the dataset.
+
+    :param name:
+        A string containing the name of the "in-memory" dataset.
 
     :param bands:
         An integer defining the number of bands for the dataset.
