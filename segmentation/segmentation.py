@@ -47,7 +47,7 @@ class SegmentVisitor:
         self.min_segID = None
         self.max_segID = None
 
-    def _findSegements(self)
+    def _findSegements(self):
         """
         Determines the pixel locations for every segment/region contained
         within a 2D array. The minimum and maximum segemnt ID's/labels are
