@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import numpy
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -117,14 +116,14 @@ def rasteriseVector(imageDataset, vectorLayer):
     """
 
     # Get the number of features contained in the layer
-    nfeatures = layer.GetFeatureCount()
+    nfeatures = vectorLayer.GetFeatureCount()
 
     # Rasterise every feature based on it's FID value +1
     for i in range(nfeatures):
-        layer.SetAttributeFilter("FID = %d"%i)
+        vectorLayer.SetAttributeFilter("FID = %d"%i)
         burn = i + 1
         gdal.RasterizeLayer(imageDataset, [1], vectorLayer, burn_values=[burn])
-        layer.SetAttributeFilter(None)
+        vectorLayer.SetAttributeFilter(None)
 
     return imageDataset
 
@@ -279,7 +278,7 @@ class Rasterise:
 
         # Create the memory dataset into which the features will be rasterised
         img_ds = createMemoryDataset(samples=samples, lines=lines, Projection=proj, 
-                     GeoTransform=proj)
+                     GeoTransform=geot)
 
         # Open the vector dataset and retrieve the first layer
         vec_ds = ogr.Open(self.VectorFname)
