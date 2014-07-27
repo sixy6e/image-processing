@@ -165,7 +165,7 @@ class SegmentVisitor:
 
         return mean_seg
 
-     def segmentMax(self, array, segmentIDs=None):
+    def segmentMax(self, array, segmentIDs=None):
         """
         Calculates the max value per segment given an array containing data.
 
@@ -214,7 +214,7 @@ class SegmentVisitor:
 
         return max_seg
 
-     def segmentMin(self, array):
+    def segmentMin(self, array):
         """
         Calculates the min value per segment given an array containing data.
 
