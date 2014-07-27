@@ -35,6 +35,10 @@ def createMemoryDataset(name='MemoryDataset', samples, lines, bands=1, Projectio
 
     :return:
         A GDAL dataset of the format type "Memory".
+
+    Example:
+        >>> ds = createMemoryDataset(samples=100, lines=200, bands=1, dtype=gdal.GDT_Byte)
+        >>> img = ds.ReadAsArray()
     """
 
     # Define the Memory driver
@@ -68,6 +72,15 @@ def projectVector(vectorLayer, from_srs, to_srs):
 
     :return:
         None. The projection transformation is done in place.
+
+    Example:
+        >>> vec_ds = ogr.Open(vec_filename)
+        >>> lyr = vec_ds.GetLayer(0)
+        >>> srs1 = osr.SpatialReference()
+        >>> srs2 = osr.SpatialReference()
+        >>> srs1.SetWellKnownGeogCS("WGS84")
+        >>> srs2.SetWellKnownGeogCS("WGS72")
+        >>> projectVector(lyr, from_srs=srs1, to_srs=srs2)
     """
 
     # Define the transformation
@@ -95,6 +108,12 @@ def rasteriseVector(imageDataset, vectorLayer):
 
     :return:
         A GDAL image dataset containing the rasterised features
+
+    Example:
+        >>> ds = createMemoryDataset(samples=100, lines=200, bands=1, dtype=gdal.GDT_Byte)
+        >>> vec_ds = ogr.Open(vec_filename)
+        >>> lyr = vec_ds.GetLayer(0)
+        >>> rasteriseVector(image_dataset=ds, vector_layer=lyr)
     """
 
     # Get the number of features contained in the layer
@@ -111,16 +130,36 @@ def rasteriseVector(imageDataset, vectorLayer):
 
 class Rasterise:
     """
-    
+    A class designed for rasterising a valid OGR vector dataset into a
+    valid GDAL image dataset. Mismatched projections are handled
+    automatically, reprojecting the vector geometry to match the image.
+
+    Geometry features are rasterised into the image via their FID value
+    +1, i.e. an FID of 10 is rasterised as the value 11 in the image.
+
+    Example:
+        >>> r_fname = 'my_image.tif'
+        >>> v_fname = 'my_vector.shp'
+        >>> segments_ds = Rasterise(RasterFname=r_fname, VectorFname=v_fname)
+        >>> segments_ds.rasterise()
+        >>> seg_arr = segments_ds.segemented_array
     """
 
-    def __init__(self, RasterFname, VectorFname):
+    def __init__(self, RasterFilename, VectorFilename):
         """
-        
+        Initialises the Rasterise class.
+
+        :param RasterFilename:
+            A string containing the pathname to a GDAL compliant image
+            file.
+
+        :param VectorFilename:
+            A string containing the pathname to an OGR compliant vector
+            file.
         """
 
-        self.RasterFname = RasterFname
-        self.VectorFname = VectorFname
+        self.RasterFname = RasterFilename
+        self.VectorFname = VectorFilename
 
         self.RasterInfo = {}
         self.VectorInfo = {}
@@ -134,7 +173,9 @@ class Rasterise:
 
     def _readRasterInfo(self):
         """
-        
+        A private method for retrieving information about the image file.
+        The image file is closed after retrieval of generic information.
+        Information is assigned to the rasterise class variable RasterInfo.
         """
 
         # Open the file
@@ -157,7 +198,9 @@ class Rasterise:
 
     def _readVectorInfo(self):
         """
-        
+        A private method for retrieving information about the image file.
+        The vector file is closed after retrieval of generic information.
+        Information is assigned to the rasterise class variable VectorInfo.
         """
 
         # Open the file
@@ -177,22 +220,56 @@ class Rasterise:
 
     def compareProjections(proj1, proj2):
         """
-        
+        Compares two projections.
+
+        :param proj1:
+            A WKT string containing the first projection.
+
+        :param proj2:
+            A WKT string containing the second projection.
+
+        :return:
+            A boolean instance indicating True or False as to whether
+            or not the two input projections are identical.
+
+        Example:
+            >>> srs1 = osr.SpatialReference()
+            >>> srs2 = osr.SpatialReference()
+            >>> srs1.SetWellKnownGeogCS("WGS84")
+            >>> srs2.SetWellKnownGeogCS("WGS72")
+            >>> result = compareProjections(srs1.ExportToWkt(), srs2.ExportToWkt())
+            >>> print result
         """
 
         srs1 = osr.SpatialReference()
         srs2 = osr.SpatialReference()
 
-        srs1.ImportFromWKT()
-        srs2.ImportFromWKT()
+        srs1.ImportFromWKT(proj1)
+        srs2.ImportFromWKT(proj2)
 
         result = bool(srs1.IsSame(srs2))
 
         return result
 
-    def _rasterise():
+    def rasterise(self, dtype=gdal.GDT_UInt32):
         """
-        
+        A method for running the rasterising process.
+        Takes care of vector geometry reprojection prior to rasterisation.
+
+        :param dtype:
+            An integer representing the GDAL datatype to be used for
+            the rasterised array. Default datatype is UInt32 given as
+            gdal.GDT_UInt32 which is represented by the integer 4.
+
+        :return:
+            No return variable. assigns the rasterised array to the
+            rasterise class variable segemented_array.
+
+        Example:
+            >>> r_fname = 'my_image.tif'
+            >>> v_fname = 'my_vector.shp'
+            >>> segments_ds = Rasterise(RasterFname=r_fname, VectorFname=v_fname)
+            >>> segments_ds.rasterise(dtype=gdal.GDT_Byte)
         """
 
         samples = self.RasterInfo["Samples"]
