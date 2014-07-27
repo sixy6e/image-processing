@@ -214,7 +214,7 @@ class SegmentVisitor:
 
         return max_seg
 
-    def segmentMin(self, array):
+    def segmentMin(self, array, segmentIDs=None):
         """
         Calculates the min value per segment given an array containing data.
 
