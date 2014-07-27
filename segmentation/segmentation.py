@@ -47,6 +47,8 @@ class SegmentVisitor:
         self.min_segID = None
         self.max_segID = None
 
+        self._findSegements()
+
     def _findSegements(self):
         """
         Determines the pixel locations for every segment/region contained
@@ -261,4 +263,54 @@ class SegmentVisitor:
             min_seg[i] = mn_
 
         return min_seg
+
+    def segmentSTDDEV(self, array, segmentIDs=None):
+        """
+        Calculates the sample standard deviation per segment given an
+        array containing data.
+        The sample standard deviation uses 1 delta degrees of freedom.
+
+        :param array:
+            A 2D NumPy array containing the data to be extracted given
+            a segmentID.
+
+        :param segmentIDs:
+            A list of integers corresponding to the segmentIDs of interest.
+            Default is to calculate the standard deviation for every segment.
+
+        :return:
+            A dictionary where each key corresponds to a segment ID, and
+            each value is the standard deviation for that segment ID.
+        """
+
+        arr_flat = array.ravel()
+        hist     = self.histogram
+        ri       = self.ri
+
+        if segmentIDs:
+            assert type(segmentIDs) == list, "segmentIDs must be of type list!"
+
+            # Get a unique listing of the segmentIDs
+            s = numpy.unique(numpy.array(segmentIDs))
+
+            # Evaluate the min and max to determine if we are outside the valid segment range
+            min_id = numpy.min(s)
+            max_id = numpy.max(s)
+            assert min_id >= self.min_segID, "The minimum segment ID in the dataset is %i"%self.min_segID
+            assert max_id <= self.max_segID, "The maximum segment ID in the dataset is %i"%self.max_segID
+        else:
+            # Create an index to loop over every segment
+            s = numpy.arange(1, hist.shape[0])
+
+        # Initialise a dictionary to hold the max value per segment
+        stddev_seg = {}
+
+        # Calculate the min value per segment
+        for i in s:
+            if (hist[i] == 0):
+                continue
+            stddev        = numpy.std(arr_flat[ri[ri[i]:ri[i+1]]], ddof=1)
+            stddev_seg[i] = stddev
+
+        return stddev_seg
 
