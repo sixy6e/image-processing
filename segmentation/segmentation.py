@@ -12,6 +12,7 @@ class SegmentVisitor:
     and ignored.
 
     Example:
+
         >>> seg_array = numpy.zeros((10,10), dtype='uint8')
         >>> seg_array[0:3,0:3] = 1
         >>> seg_array[0:3,7:10] = 2
