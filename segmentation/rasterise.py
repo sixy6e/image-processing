@@ -36,6 +36,7 @@ def createMemoryDataset(samples, lines, name='MemoryDataset', bands=1, Projectio
         A GDAL dataset of the format type "Memory".
 
     Example:
+
         >>> ds = createMemoryDataset(samples=100, lines=200, bands=1, dtype=gdal.GDT_Byte)
         >>> img = ds.ReadAsArray()
     """
@@ -73,6 +74,7 @@ def projectVector(vectorLayer, from_srs, to_srs):
         None. The projection transformation is done in place.
 
     Example:
+
         >>> vec_ds = ogr.Open(vec_filename)
         >>> lyr = vec_ds.GetLayer(0)
         >>> srs1 = osr.SpatialReference()
@@ -109,6 +111,7 @@ def rasteriseVector(imageDataset, vectorLayer):
         A GDAL image dataset containing the rasterised features
 
     Example:
+
         >>> ds = createMemoryDataset(samples=100, lines=200, bands=1, dtype=gdal.GDT_Byte)
         >>> vec_ds = ogr.Open(vec_filename)
         >>> lyr = vec_ds.GetLayer(0)
@@ -127,6 +130,40 @@ def rasteriseVector(imageDataset, vectorLayer):
 
     return imageDataset
 
+def compareProjections(proj1, proj2):
+    """
+    Compares two projections.
+
+    :param proj1:
+        A WKT string containing the first projection.
+
+    :param proj2:
+        A WKT string containing the second projection.
+
+    :return:
+        A boolean instance indicating True or False as to whether
+        or not the two input projections are identical.
+
+    Example:
+
+        >>> srs1 = osr.SpatialReference()
+        >>> srs2 = osr.SpatialReference()
+        >>> srs1.SetWellKnownGeogCS("WGS84")
+        >>> srs2.SetWellKnownGeogCS("WGS72")
+        >>> result = compareProjections(srs1.ExportToWkt(), srs2.ExportToWkt())
+        >>> print result
+    """
+
+    srs1 = osr.SpatialReference()
+    srs2 = osr.SpatialReference()
+
+    srs1.ImportFromWkt(proj1)
+    srs2.ImportFromWkt(proj2)
+
+    result = bool(srs1.IsSame(srs2))
+
+    return result
+
 class Rasterise:
     """
     A class designed for rasterising a valid OGR vector dataset into a
@@ -137,6 +174,7 @@ class Rasterise:
     +1, i.e. an FID of 10 is rasterised as the value 11 in the image.
 
     Example:
+
         >>> r_fname = 'my_image.tif'
         >>> v_fname = 'my_vector.shp'
         >>> segments_ds = Rasterise(RasterFname=r_fname, VectorFname=v_fname)
@@ -163,12 +201,12 @@ class Rasterise:
         self.RasterInfo = {}
         self.VectorInfo = {}
 
+        self.SameProjection   = None
+        self.segemented_array = None
+
         self._readRasterInfo()
         self._readVectorInfo()
-
-        self.SameProjection = self.compareProjections(self.RasterInfo["Projection"], self.VectorInfo["Projection"])
-
-        self.segemented_array = None
+        self._compareProjections()
 
     def _readRasterInfo(self):
         """
@@ -181,7 +219,7 @@ class Rasterise:
         ds = gdal.Open(self.RasterFname)
 
         samples = ds.RasterXSize
-        lines   = ds.RasterYsize
+        lines   = ds.RasterYSize
         bands   = ds.RasterCount
         proj    = ds.GetProjection()
         geot    = ds.GetGeoTransform()
@@ -217,38 +255,13 @@ class Rasterise:
         # Close the file
         vec_ds = None
 
-    def compareProjections(proj1, proj2):
+    def _compareProjections(self):
         """
-        Compares two projections.
-
-        :param proj1:
-            A WKT string containing the first projection.
-
-        :param proj2:
-            A WKT string containing the second projection.
-
-        :return:
-            A boolean instance indicating True or False as to whether
-            or not the two input projections are identical.
-
-        Example:
-            >>> srs1 = osr.SpatialReference()
-            >>> srs2 = osr.SpatialReference()
-            >>> srs1.SetWellKnownGeogCS("WGS84")
-            >>> srs2.SetWellKnownGeogCS("WGS72")
-            >>> result = compareProjections(srs1.ExportToWkt(), srs2.ExportToWkt())
-            >>> print result
+        A private method used for setting up the call to
+        compareProjections(proj1, proj2).
         """
 
-        srs1 = osr.SpatialReference()
-        srs2 = osr.SpatialReference()
-
-        srs1.ImportFromWKT(proj1)
-        srs2.ImportFromWKT(proj2)
-
-        result = bool(srs1.IsSame(srs2))
-
-        return result
+        self.SameProjection = compareProjections(self.RasterInfo["Projection"], self.VectorInfo["Projection"])
 
     def rasterise(self, dtype=gdal.GDT_UInt32):
         """
@@ -265,6 +278,7 @@ class Rasterise:
             rasterise class variable segemented_array.
 
         Example:
+
             >>> r_fname = 'my_image.tif'
             >>> v_fname = 'my_vector.shp'
             >>> segments_ds = Rasterise(RasterFname=r_fname, VectorFname=v_fname)
@@ -286,19 +300,19 @@ class Rasterise:
 
         if self.SameProjection:
             # Rasterise the vector into image segments/rois
-            rasteriseVector(image_dataset=img_ds, vector_layer=layer)
+            rasteriseVector(imageDataset=img_ds, vectorLayer=layer)
         else:
             # Initialise the image and vector spatial reference
             img_srs = osr.SpatialReference()
             vec_srs = osr.SpatialReference()
-            img_srs.ImportFromWKT(proj)
-            vec_srs.ImportFromWKT(self.VectorInfo["Projection"])
+            img_srs.ImportFromWkt(proj)
+            vec_srs.ImportFromWkt(self.VectorInfo["Projection"])
 
             # Project the vector
             projectVector(layer, from_srs=vec_srs, to_srs=img_srs)
 
             # Rasterise the vector into image segments/rois
-            rasteriseVector(image_dataset=img_ds, vector_layer=layer)
+            rasteriseVector(imageDataset=img_ds, vectorLayer=layer)
 
         # Read the segmented array
         self.segemented_array = img_ds.ReadAsArray()
