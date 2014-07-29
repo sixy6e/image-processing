@@ -49,7 +49,7 @@ class SegmentVisitor:
         >>> seg_ds.segmentMean(vals)
         >>> seg_ds.segmentMax(vals)
         >>> seg_ds.segmentMin(vals)
-        >>> seg_ds.getSegementData(vals, segmentID=2)
+        >>> seg_ds.getSegmentData(vals, segmentID=2)
         >>> seg_ds.getSegmentLocations(segmentID=3)
     """
 
@@ -74,9 +74,9 @@ class SegmentVisitor:
         self.min_segID = None
         self.max_segID = None
 
-        self._findSegements()
+        self._findSegments()
 
-    def _findSegements(self):
+    def _findSegments(self):
         """
         Determines the pixel locations for every segment/region contained
         within a 2D array. The minimum and maximum segemnt ID's/labels are
@@ -91,7 +91,7 @@ class SegmentVisitor:
         self.min_segID = numpy.min(self.array > 0)
         self.max_segID = numpy.max(self.array)
 
-    def getSegementData(self, array, segmentID=1):
+    def getSegmentData(self, array, segmentID=1):
         """
         Retrieve the data from an array corresponding to a segmentID.
 
