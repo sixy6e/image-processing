@@ -1,0 +1,4 @@
+Installing the package:
+python setup.py install
+use --prefix=/dir/to/install to install to a specific location. Defaults to the site-applications of your python install path.
+
