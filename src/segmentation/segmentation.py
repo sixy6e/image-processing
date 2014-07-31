@@ -37,6 +37,8 @@ class SegmentVisitor:
     calculate basic statistics. A value of zero is considered to be the background
     and ignored.
 
+    Designed as an easier interface for analysing segmented regions.
+
     Example:
 
         >>> seg_array = numpy.zeros((10,10), dtype='uint8')
@@ -88,8 +90,15 @@ class SegmentVisitor:
         self.histogram = h['histogram']
         self.ri        = h['ri']
 
-        self.min_segID = numpy.min(self.array > 0)
-        self.max_segID = numpy.max(self.array)
+        # Determine the min and max segment ID's
+        mx = numpy.max(self.array)
+        if mx > 0:
+            mn = numpy.min(self.array[self.array > 0])
+        else:
+            mn = mx
+
+        self.min_segID = mn
+        self.max_segID = mx
 
     def getSegmentData(self, array, segmentID=1):
         """
@@ -112,6 +121,11 @@ class SegmentVisitor:
         ri       = self.ri
         i        = segmentID
         arr_flat = array.ravel()
+
+        # Check for bounds
+        if (i > self.max_segID) or (i < self.min_segID):
+            data = numpy.array([])
+            return data
 
         if ri[i+1] > ri[i]:
             data = arr_flat[ri[ri[i]:ri[i+1]]]
@@ -136,6 +150,11 @@ class SegmentVisitor:
 
         ri = self.ri
         i  = segmentID
+
+        # Check for bounds
+        if (i > self.max_segID) or (i < self.min_segID):
+            idx = (numpy.array([]), numpy.array([]))
+            return idx
 
         if ri[i+1] > ri[i]:
             idx = ri[ri[i]:ri[i+1]]
@@ -341,3 +360,44 @@ class SegmentVisitor:
 
         return stddev_seg
 
+    def segmentArea(self, segmentIDs=None, scaleFactor=1.0):
+        """
+        Returns the area for a given segment ID.
+
+        :param segmentIDs:
+            A list of integers corresponding to the segmentIDs of interest.
+            Default is to return the area for every segment.
+
+        :param scaleFactor:
+            A value representing a scale factor for quantifying a pixels unit
+            area. Default is 1.0.
+
+        :return:
+            A dictionary where each key corresponds to a segment ID, and
+            each value is the area for that segment ID.
+        """
+
+        hist     = self.histogram
+
+        if segmentIDs:
+            assert type(segmentIDs) == list, "segmentIDs must be of type list!"
+
+            # Get a unique listing of the segmentIDs
+            s = numpy.unique(numpy.array(segmentIDs))
+
+            # Evaluate the min and max to determine if we are outside the valid segment range
+            min_id = numpy.min(s)
+            max_id = numpy.max(s)
+            assert min_id >= self.min_segID, "The minimum segment ID in the dataset is %i"%self.min_segID
+            assert max_id <= self.max_segID, "The maximum segment ID in the dataset is %i"%self.max_segID
+        else:
+            # Create an index to loop over every segment
+            s = numpy.arange(1, hist.shape[0])
+
+        # Initialise a dictionary to hold the max value per segment
+        area_seg = {}
+
+        for i in s:
+            area_seg[i] = hist[i] * scaleFactor
+
+        return area_seg
