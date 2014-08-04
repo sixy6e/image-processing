@@ -83,7 +83,6 @@ def calculate_triangle_threshold(histogram, xone, ytwo):
     thresh_loc = numpy.argmax(dists)
 
     # Determine the threshold at the location
-    thresh = (ABS(left_span) GT ABS(right_span)) ? thresh_loc : thresh_loc + mx_loc
     if (abs(left_span) > abs(right_span)):
         thresh = thresh_loc
     else:
