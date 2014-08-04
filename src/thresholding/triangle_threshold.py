@@ -31,9 +31,22 @@ import numpy
 from osgeo import gdal
 from IDL_functions import histogram
 
-def calculate_triangle_threshold(histogram, xone, ytwo):
+def calculate_triangle_threshold(histogram):
     """
+    Calculates the threshold using the triangle method.
+
+    :param histogram:
+        A 1D numpy array containing the histogram of the data from
+        which a threshold will be calculated.
+
+    :return:
+        The triangle threshold corresponding to the input histogram.
+        Essentially this is akin to returning the location of the
+        bin to threshold. In order to correspond the value back to
+        the input data, scale the threshold via the binsize and the
+        starting bin location.
     """
+
     mx_loc = numpy.argmax(histogram)
     mx     = histogram[mx]
 
