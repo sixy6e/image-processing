@@ -377,7 +377,7 @@ class SegmentVisitor:
             each value is the area for that segment ID.
         """
 
-        hist     = self.histogram
+        hist = self.histogram
 
         if segmentIDs:
             assert type(segmentIDs) == list, "segmentIDs must be of type list!"
@@ -401,3 +401,51 @@ class SegmentVisitor:
             area_seg[i] = hist[i] * scaleFactor
 
         return area_seg
+
+    def resetSegmentIDs(self, inplace=True):
+        """
+        Relabels segment id's starting at id 1.
+        Useful for when the segmented array has segments removed
+        leaving non-continuous segment id's.  For example [1,2,4,5,6]
+        has id 3 missing.  The result of resetting the segment id's
+        would yield [1,2,3,4,5], 4->3, 5->4 & 6->5 (old->new).
+
+        :param inplace:
+            A boolean indicating whether or not to reset the segment
+            id's inplace or create a copy. Default is inplace (True).
+
+        :return:
+            If inplace=False, then a copy of the segmented array is
+            made before resetting the segment id's and returning the
+            resulting 2D segmented array.
+            If inplace=True, then the segment id's will be changed
+            inplace, and the SegmentVisitor class is re-intiialised.
+        """
+
+        if inplace:
+            array = self.array1D
+        else:
+            array = self.array.flatten()
+
+        hist = self.histogram
+        ri   = self.ri
+
+        # Initialise the starting label
+        label = 1
+        for i in range(1, hist.shape[0]):
+            if hist[i] == 0:
+                continue
+            array[ri[ri[i]:ri[i+1]]] = label
+            label += 1
+
+        if inplace:
+            # Reinitialise the segment class
+            self.__init__(array)
+        else:
+            return array
+
+    def sieveSegments(self, inplace=True):
+        """
+        Hmm, could implement one of several things here.
+        Spatial filter: min area, max area
+        """
