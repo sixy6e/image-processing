@@ -87,7 +87,7 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             for b in range(bands):
                 img = image[b].flatten()
 
-                h = histogram(img, locations='loc', omin='omin', binsize=Binsize, max=Max, min=Min, nbins=Nbins)
+                h = histogram(img, locations='loc', omin='omin', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
                 hist = h['histogram']
                 omin = h['omin']
                 loc  = h['loc']
@@ -121,7 +121,7 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
 
         elif (len(dims) == 2):
             img = image.flatten()
-            h = histogram(img, locations='loc', omin='omin', binsize=Binsize, max=Max, min=Min, nbins=Nbins)
+            h = histogram(img, locations='loc', omin='omin', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
             hist = h['histogram']
             omin = h['omin']
             loc  = h['loc']
@@ -152,7 +152,7 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
                 return threshold
 
         elif (len(dims) == 1):
-            h = histogram(image, locations='loc', omin='omin', binsize=Binsize, max=Max, min=Min, nbins=Nbins)
+            h = histogram(image, locations='loc', omin='omin', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
             hist = h['histogram']
             omin = h['omin']
             loc  = h['loc']
@@ -191,7 +191,7 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             bands = dims[0]
             for b in range(bands):
                 img = image[b].flatten()
-                h = histogram(img, reverse_indices='ri', omin='omin', locations='loc', binsize=Binsize, max=Max, min=Min, nbins=Nbins)
+                h = histogram(img, reverse_indices='ri', omin='omin', locations='loc', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
 
                 hist = h['histogram']
                 ri   = h['ri']
@@ -233,7 +233,7 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             
         elif (len(dims) == 2):
             img = image.flatten()
-            h = histogram(img, reverse_indices='ri', omin='omin', locations='loc', binsize=Binsize, max=Max, min=Min, nbins=Nbins)
+            h = histogram(img, reverse_indices='ri', omin='omin', locations='loc', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
 
             hist = h['histogram']
             ri   = h['ri']
@@ -270,7 +270,7 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
                 return threshold
 
         elif (len(dims) == 1):
-            h = histogram(image, reverse_indices='ri', omin='omin', locations='loc', binsize=Binsize, max=Max, min=Min, nbins=Nbins)
+            h = histogram(image, reverse_indices='ri', omin='omin', locations='loc', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
 
             hist = h['histogram']
             ri   = h['ri']

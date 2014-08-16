@@ -159,7 +159,7 @@ def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None, Appl
     dims = array.shape
 
     arr = array.flatten()
-    h = histogram(arr, locations='loc', omax='omax', omin='omin', binsize=Binsize, max=Max, min=Min, nbins=Nbins)
+    h = histogram(arr, locations='loc', omax='omax', omin='omin', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
 
     hist = h['histogram']
     omin = h['omin']

@@ -85,7 +85,7 @@ class SegmentVisitor:
         also determined.
         """
 
-        h = histogram(self.array1D, min=0, reverse_indices='ri')
+        h = histogram(self.array1D, Min=0, reverse_indices='ri')
 
         self.histogram = h['histogram']
         self.ri        = h['ri']
@@ -428,7 +428,7 @@ class SegmentVisitor:
             array = self.array.flatten()
 
         # Calculate the histogram to find potential non-consecutive segments
-        h = histogram(array, min=0, reverse_indices='ri')
+        h = histogram(array, Min=0, reverse_indices='ri')
 
         hist = h['histogram']
         ri   = h['ri']
