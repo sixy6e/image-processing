@@ -427,8 +427,11 @@ class SegmentVisitor:
         else:
             array = self.array.flatten()
 
-        hist = self.histogram
-        ri   = self.ri
+        # Calculate the histogram to find potential non-consecutive segments
+        h = histogram(array, min=0, reverse_indices='ri')
+
+        hist = h['histogram']
+        ri   = h['ri']
 
         # Initialise the starting label
         label = 1
@@ -444,8 +447,58 @@ class SegmentVisitor:
         else:
             return array
 
-    def sieveSegments(self, inplace=True):
+    def sieveSegments(self, value, Min=True, inplace=True):
         """
-        Hmm, could implement one of several things here.
-        Spatial filter: min area, max area
+        Sieves segments by filtering based on a minimum or maximum
+        area criterion. If filtering by minimum (default) then segments
+        that are < value are set to zero. If filtering by maximum then
+        segments that are > value are set to zero.
+
+        :param value:
+            Area criterion from which to filter by.
+
+        :param Min:
+            A boolean indicating the filtering type. Default is to
+            filter by minimum criterion (Min=True).
+
+        :param inplace:
+            A boolean indicating whether or not to reset the segment
+            id's inplace or create a copy. Default is inplace (True).
+
+        :return:
+            If inplace=False, then a copy of the segmented array is
+            made before filtering the segments. A 2D NumPy array will
+            be returned.
+            If inplace=True, then the filtering will be performed
+            inplace. Before returning, the SegmentVisitor class is
+            re-intiialised and the resetSegmentIDs is run.  No array
+            is returned.
         """
+
+        if inplace:
+            array = self.array1D
+        else:
+            array = self.array.flatten()
+
+        hist = self.histogram
+        ri   = self.ri
+
+        # Filter
+        if Min:
+            wh = numpy.where(hist < value)[0]
+        else:
+            wh = numpy.where(hist > value)[0]
+
+        # Apply filter
+        for i in wh:
+            if hist[i] == 0:
+                continue
+            array[ri[ri[i]:ri[i+1]]] = 0
+
+        if inplace:
+            # Reinitialise the segment class and reset the segment id's
+            self.__init__(array)
+            self.resetSegmentIDs()
+        else:
+            return array
+
