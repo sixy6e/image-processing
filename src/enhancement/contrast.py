@@ -38,13 +38,13 @@ def calculate_binsize(array, nbins=256):
     # ENVI appears to ceil the result
     binsize = numpy.ceil((Max - Min) / (nbins - 1))
 
-    return binsize
+    return binsize, Min, Max
 
 def linear_percent(array, percent=2, nbins=256):
     """
     
     """
-    binsize = calculate_binsize(array, nbins=nbins)
+    binsize, MinV, MaxV = calculate_binsize(array, nbins=nbins)
     stretch = hist_equal(array, Binsize=binsize, Percent=Percent)
 
     return stretch
@@ -53,15 +53,26 @@ def equalisation(array, nbins=256):
     """
     
     """
-    binsize = calculate_binsize(array, nbins=nbins)
+    binsize, MinV, MaxV = calculate_binsize(array, nbins=nbins)
     stretch = hist_equal(array, Binsize=binsize)
 
     return stretch
 
-def square_root():
+def square_root(array, nbins=256):
     """
     
     """
+    # Just a temp version implemented
+    # This is a direct LUT translation with no histogram involved
+    # We need to be able to set upper and lower limits
+
+    fcn  = numpy.sqrt(numpy.arange(256).astype('float'))
+    bfcn = bytscl(fcn)
+    binsize, MinV, MaxV = calculate_binsize(array, nbins=nbins)
+    arr = numpy.floor((arr - MinV) / binsize).astype('int')
+    dims = array.shape
+    scl = (bfcn[arr.ravel()]).reshape(dims)
+    return scl
 
 def gauss():
     """
