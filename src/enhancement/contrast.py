@@ -69,15 +69,29 @@ def square_root(array, nbins=256):
     fcn  = numpy.sqrt(numpy.arange(256).astype('float'))
     bfcn = bytscl(fcn)
     binsize, MinV, MaxV = calculate_binsize(array, nbins=nbins)
-    arr = numpy.floor((arr - MinV) / binsize).astype('int')
+    array = numpy.floor((array - MinV) / binsize).astype('int')
     dims = array.shape
-    scl = (bfcn[arr.ravel()]).reshape(dims)
+    scl = (bfcn[array.ravel()]).reshape(dims)
     return scl
 
 def gauss():
     """
     
     """
+
+def log(array, nbins=256):
+    """
+    
+    """
+    # Just a temp version until I can properly flesh it out
+
+    fcn  = numpy.log(numpy.arange(256).astype('float') + 1)
+    bfcn = bytscl(fcn)
+    binsize, MinV, MaxV = calculate_binsize(array, nbins=nbins)
+    array = numpy.floor((array - MinV) / binsize).astype('int')
+    dims = array.shape
+    scl = (bfcn[array.ravel()]).reshape(dims)
+    return scl
 
 def hist_match():
     """
