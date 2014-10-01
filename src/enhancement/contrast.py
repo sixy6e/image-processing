@@ -23,13 +23,15 @@ def data_convert(val, b):
         'float64' : numpy.float64(b),
         }.get(instr, 'Error')
 
-def calculate_binsize(array, nbins=256):
+def calculate_binsize(array, Min=None, Max=None, nbins=256):
     """
     
     """
-    # Calculate min and max. We always check for NaN's
-    Max = numpy.nanmax(array)
-    Min = numpy.nanmin(array)
+    # Calculate min and max if not set. We always check for NaN's
+    if Max is None:
+        Max = numpy.nanmax(array)
+    if Min is None:
+        Min = numpy.nanmin(array)
 
     # Convert min/max to array datatype
     Min = data_convert(array.dtype.name, Min)
@@ -40,25 +42,34 @@ def calculate_binsize(array, nbins=256):
 
     return binsize, Min, Max
 
-def linear_percent(array, percent=2, nbins=256):
+def linear_percent(array, percent=2, Min=None, Max=None, nbins=256, Top=None):
     """
     
     """
-    binsize, MinV, MaxV = calculate_binsize(array, nbins=nbins)
-    stretch = hist_equal(array, Binsize=binsize, Percent=Percent)
+    # Get the desired binsize
+    binsize, MinV, MaxV = calculate_binsize(array, Min=Min, Max=Max,
+                                            nbins=nbins)
+
+    # Get the stretched array
+    stretch = hist_equal(array, Binsize=binsize, MaxV=Max, MinV=Min, Top=Top,
+                         Percent=Percent)
 
     return stretch
 
-def equalisation(array, nbins=256):
+def equalisation(array, Min=None, Max=None, nbins=256, Top=None):
     """
     
     """
-    binsize, MinV, MaxV = calculate_binsize(array, nbins=nbins)
-    stretch = hist_equal(array, Binsize=binsize)
+    # Get the desired binsize
+    binsize, MinV, MaxV = calculate_binsize(array, Min=Min, Max=Max,
+                                            nbins=nbins)
+
+    # Get the stretched array
+    stretch = hist_equal(array, Binsize=binsize, MaxV=Max, MinV=Min, Top=Top)
 
     return stretch
 
-def square_root(array, nbins=256):
+def square_root(array, Min=None, Max=None, nbins=256, Top=None):
     """
     
     """
@@ -66,12 +77,26 @@ def square_root(array, nbins=256):
     # This is a direct LUT translation with no histogram involved
     # We need to be able to set upper and lower limits
 
-    fcn  = numpy.sqrt(numpy.arange(256).astype('float'))
-    bfcn = bytscl(fcn)
-    binsize, MinV, MaxV = calculate_binsize(array, nbins=nbins)
-    array = numpy.floor((array - MinV) / binsize).astype('int')
+    # Array dimensions
     dims = array.shape
+
+    # Define the LUT function
+    fcn  = numpy.sqrt(numpy.arange(nbins).astype('float'))
+    bfcn = bytscl(fcn, Top=Top)
+
+    # Get the desired binsize
+    binsize, MinV, MaxV = calculate_binsize(array, Min=Min, Max=Max,
+                                            nbins=nbins)
+
+    # Clip the array to the min and max
+    array = array.clip(min=MinV, max=MaxV)
+
+    # Scale to integers
+    array = numpy.floor((array - MinV) / binsize).astype('int')
+
+    # Apply the LUT
     scl = (bfcn[array.ravel()]).reshape(dims)
+
     return scl
 
 def gauss():
@@ -79,18 +104,32 @@ def gauss():
     
     """
 
-def log(array, nbins=256):
+def log(array, Min=None, Max=None, nbins=256, Top=None):
     """
     
     """
     # Just a temp version until I can properly flesh it out
 
-    fcn  = numpy.log(numpy.arange(256).astype('float') + 1)
-    bfcn = bytscl(fcn)
-    binsize, MinV, MaxV = calculate_binsize(array, nbins=nbins)
-    array = numpy.floor((array - MinV) / binsize).astype('int')
+    # Array dimensions
     dims = array.shape
+
+    # Define the LUT function
+    fcn  = numpy.log(numpy.arange(nbins).astype('float') + 1)
+    bfcn = bytscl(fcn, Top=Top)
+
+    # Get the desired binsize
+    binsize, MinV, MaxV = calculate_binsize(array, Min=Min, Max=Max,
+                                            nbins=nbins)
+
+    # Clip the array to the min and max
+    array = array.clip(min=MinV, max=MaxV)
+
+    # Scale to integers
+    array = numpy.floor((array - MinV) / binsize).astype('int')
+
+    # Apply the LUT
     scl = (bfcn[array.ravel()]).reshape(dims)
+
     return scl
 
 def hist_match():
