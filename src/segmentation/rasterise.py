@@ -31,7 +31,9 @@ from osgeo import ogr
 from osgeo import osr
 
 
-def createMemoryDataset(samples, lines, name='MemoryDataset', bands=1, Projection=None, GeoTransform=None, dtype=gdal.GDT_UInt32):
+def create_memory_dataset(samples, lines, name='MemoryDataset', bands=1,
+                        projection=None, geotransform=None,
+                        dtype=gdal.GDT_UInt32):
     """
     Creates a GDAL dataset contained entirely in memory (format type = "MEM").
 
@@ -47,11 +49,11 @@ def createMemoryDataset(samples, lines, name='MemoryDataset', bands=1, Projectio
     :param bands:
         An integer defining the number of bands for the dataset.
 
-    :param Projection:
+    :param projection:
         A WKT string containing the projection used by the dataset.
 
-    :param GeoTransform:
-        A tuple containing the GeoTransform used by the dataset.  The tuple is
+    :param geotransform:
+        A tuple containing the geotransform used by the dataset.  The tuple is
         if the form ().
 
     :param dtype:
@@ -63,10 +65,9 @@ def createMemoryDataset(samples, lines, name='MemoryDataset', bands=1, Projectio
 
     Example:
 
-        >>> ds = createMemoryDataset(samples=100, lines=200, bands=1, dtype=gdal.GDT_Byte)
+        >>> ds = create_memory_dataset(samples=100, lines=200, bands=1, dtype=gdal.GDT_Byte)
         >>> img = ds.ReadAsArray()
     """
-
     # Define the Memory driver
     drv = gdal.GetDriverByName("MEM")
 
@@ -74,19 +75,20 @@ def createMemoryDataset(samples, lines, name='MemoryDataset', bands=1, Projectio
     outds = drv.Create(name, samples, lines, bands, dtype)
 
     # Set the projection and geotransfrom
-    if Projection:
-        outds.SetGeoTransform(GeoTransform)
-    if GeoTransform:
-        outds.SetProjection(Projection)
+    if projection:
+        outds.SetGeoTransform(geotransform)
+    if geotransform:
+        outds.SetProjection(projection)
 
     return outds
 
-def projectVector(vectorLayer, from_srs, to_srs):
+
+def project_vector(vector_layer, from_srs, to_srs):
     """
     Projects a layer from one co-ordinate system to another. The transformation
     of each features' geometry occurs in-place.
 
-    :param vectorLayer:
+    :param vector_layer:
         An OGR layer object.
 
     :param from_srs:
@@ -101,25 +103,25 @@ def projectVector(vectorLayer, from_srs, to_srs):
 
     Example:
 
-        >>> vec_ds = ogr.Open(vec_filename)
+        >>> vec_ds = ogr.Open(vec_fname)
         >>> lyr = vec_ds.GetLayer(0)
         >>> srs1 = osr.SpatialReference()
         >>> srs2 = osr.SpatialReference()
         >>> srs1.SetWellKnownGeogCS("WGS84")
         >>> srs2.SetWellKnownGeogCS("WGS72")
-        >>> projectVector(lyr, from_srs=srs1, to_srs=srs2)
+        >>> project_vector(lyr, from_srs=srs1, to_srs=srs2)
     """
-
     # Define the transformation
     tform = osr.CoordinateTransformation(from_srs, to_srs)
 
     # Extract the geometry of every feature and transform it
     # Note: Transformation is done in place!!!
-    for feat in vectorLayer:
+    for feat in vector_layer:
         geom = feat.GetGeometryRef()
         geom.Transform(tform)
 
-def rasteriseVector(imageDataset, vectorLayer):
+
+def rasterise_vector(image_dataset, vector_layer):
     """
     Converts a vector to a raster via a process known as rasterisation.
 
@@ -127,10 +129,10 @@ def rasteriseVector(imageDataset, vectorLayer):
     The stored value in the array corresponds to a features FID + 1, eg an FID
     of 10 will be stored in the raster as 11.
 
-    :param imageDataset:
+    :param image_dataset:
         A GDAL image dataset.
 
-    :param vectorLayer:
+    :param vector_layer:
         An OGR layer object.
 
     :return:
@@ -138,25 +140,26 @@ def rasteriseVector(imageDataset, vectorLayer):
 
     Example:
 
-        >>> ds = createMemoryDataset(samples=100, lines=200, bands=1, dtype=gdal.GDT_Byte)
-        >>> vec_ds = ogr.Open(vec_filename)
+        >>> ds = create_memory_dataset(samples=100, lines=200, bands=1, dtype=gdal.GDT_Byte)
+        >>> vec_ds = ogr.Open(vec_fname)
         >>> lyr = vec_ds.GetLayer(0)
-        >>> rasteriseVector(image_dataset=ds, vector_layer=lyr)
+        >>> rasterise_vector(image_dataset=ds, vector_layer=lyr)
     """
-
     # Get the number of features contained in the layer
-    nfeatures = vectorLayer.GetFeatureCount()
+    nfeatures = vector_layer.GetFeatureCount()
 
     # Rasterise every feature based on it's FID value +1
     for i in range(nfeatures):
-        vectorLayer.SetAttributeFilter("FID = %d"%i)
+        vector_layer.SetAttributeFilter("FID = {fid}".format(fid=i))
         burn = i + 1
-        gdal.RasterizeLayer(imageDataset, [1], vectorLayer, burn_values=[burn])
-        vectorLayer.SetAttributeFilter(None)
+        gdal.RasterizeLayer(image_dataset, [1], vector_layer,
+                            burn_values=[burn])
+        vector_layer.SetAttributeFilter(None)
 
-    return imageDataset
+    return image_dataset
 
-def compareProjections(proj1, proj2):
+
+def compare_projections(proj1, proj2):
     """
     Compares two projections.
 
@@ -176,10 +179,9 @@ def compareProjections(proj1, proj2):
         >>> srs2 = osr.SpatialReference()
         >>> srs1.SetWellKnownGeogCS("WGS84")
         >>> srs2.SetWellKnownGeogCS("WGS72")
-        >>> result = compareProjections(srs1.ExportToWkt(), srs2.ExportToWkt())
+        >>> result = compare_projections(srs1.ExportToWkt(), srs2.ExportToWkt())
         >>> print result
     """
-
     srs1 = osr.SpatialReference()
     srs2 = osr.SpatialReference()
 
@@ -189,6 +191,7 @@ def compareProjections(proj1, proj2):
     result = bool(srs1.IsSame(srs2))
 
     return result
+
 
 class Rasterise:
     """
@@ -203,91 +206,93 @@ class Rasterise:
 
         >>> r_fname = 'my_image.tif'
         >>> v_fname = 'my_vector.shp'
-        >>> segments_ds = Rasterise(RasterFname=r_fname, VectorFname=v_fname)
+        >>> segments_ds = Rasterise(raster_fname=r_fname, vector_fname=v_fname)
         >>> segments_ds.rasterise()
-        >>> seg_arr = segments_ds.segemented_array
+        >>> seg_arr = segments_ds.segmented_array
     """
 
-    def __init__(self, RasterFilename, VectorFilename):
+    def __init__(self, raster_fname, vector_fname):
         """
         Initialises the Rasterise class.
 
-        :param RasterFilename:
+        :param raster_fname:
             A string containing the pathname to a GDAL compliant image
             file.
 
-        :param VectorFilename:
+        :param vector_fname:
             A string containing the pathname to an OGR compliant vector
             file.
         """
+        self.raster_fname = raster_fname
+        self.vector_fname = vector_fname
 
-        self.RasterFname = RasterFilename
-        self.VectorFname = VectorFilename
+        self.raster_info = {}
+        self.vector_info = {}
 
-        self.RasterInfo = {}
-        self.VectorInfo = {}
+        self.same_projection = None
+        self.segmented_array = None
 
-        self.SameProjection   = None
-        self.segemented_array = None
+        self._read_raster_info()
+        self._read_vector_info()
+        self._compare_projections()
 
-        self._readRasterInfo()
-        self._readVectorInfo()
-        self._compareProjections()
 
-    def _readRasterInfo(self):
+    def _read_raster_info(self):
         """
         A private method for retrieving information about the image file.
         The image file is closed after retrieval of generic information.
-        Information is assigned to the rasterise class variable RasterInfo.
+        Information is assigned to the rasterise class variable raster_info.
         """
-
         # Open the file
-        ds = gdal.Open(self.RasterFname)
+        ds = gdal.Open(self.raster_fname)
 
         samples = ds.RasterXSize
-        lines   = ds.RasterYSize
-        bands   = ds.RasterCount
-        proj    = ds.GetProjection()
-        geot    = ds.GetGeoTransform()
+        lines = ds.RasterYSize
+        bands = ds.RasterCount
+        proj = ds.Getprojection()
+        geot = ds.GetGeoTransform()
 
-        self.RasterInfo["Samples"]      = samples
-        self.RasterInfo["Lines"]        = lines
-        self.RasterInfo["Bands"]        = bands
-        self.RasterInfo["Projection"]   = proj
-        self.RasterInfo["GeoTransform"] = geot
+        self.raster_info["samples"] = samples
+        self.raster_info["lines"] = lines
+        self.raster_info["bands"] = bands
+        self.raster_info["projection"] = proj
+        self.raster_info["geotransform"] = geot
 
         # Close the dataset
         ds = None
 
-    def _readVectorInfo(self):
+
+    def _read_vector_info(self):
         """
         A private method for retrieving information about the image file.
         The vector file is closed after retrieval of generic information.
-        Information is assigned to the rasterise class variable VectorInfo.
+        Information is assigned to the rasterise class variable vector_info.
         """
-
         # Open the file
-        vec_ds = ogr.Open(self.VectorFname)
+        vec_ds = ogr.Open(self.vector_fname)
 
-        lyr_cnt  = vec_ds.GetLayerCount()
-        layer    = vec_ds.GetLayer()
+        lyr_cnt = vec_ds.GetLayerCount()
+        layer = vec_ds.GetLayer()
         feat_cnt = layer.GetFeatureCount()
-        proj     = layer.GetSpatialRef().ExportToWkt()
+        proj = layer.GetSpatialRef().ExportToWkt()
 
-        self.VectorInfo["LayerCount"]   = lyr_cnt
-        self.VectorInfo["FeatureCount"] = feat_cnt
-        self.VectorInfo["Projection"]   = proj
+        self.vector_info["layer_count"] = lyr_cnt
+        self.vector_info["feature_count"] = feat_cnt
+        self.vector_info["projection"] = proj
 
         # Close the file
         vec_ds = None
 
-    def _compareProjections(self):
+
+    def _compare_projections(self):
         """
         A private method used for setting up the call to
-        compareProjections(proj1, proj2).
+        compare_projections(proj1, proj2).
         """
+        raster_prj = self.raster_info["projection"]
+        vector_prj = self.vector_info["projection"]
+        self.same_projection = compare_projections(raster_prj, vector_prj)
 
-        self.SameProjection = compareProjections(self.RasterInfo["Projection"], self.VectorInfo["Projection"])
 
     def rasterise(self, dtype=gdal.GDT_UInt32):
         """
@@ -301,49 +306,47 @@ class Rasterise:
 
         :return:
             No return variable. assigns the rasterised array to the
-            rasterise class variable segemented_array.
+            rasterise class variable segmented_array.
 
         Example:
 
             >>> r_fname = 'my_image.tif'
             >>> v_fname = 'my_vector.shp'
-            >>> segments_ds = Rasterise(RasterFname=r_fname, VectorFname=v_fname)
+            >>> segments_ds = Rasterise(raster_fname=r_fname, vector_fname=v_fname)
             >>> segments_ds.rasterise(dtype=gdal.GDT_Byte)
         """
-
-        samples = self.RasterInfo["Samples"]
-        lines   = self.RasterInfo["Lines"]
-        proj    = self.RasterInfo["Projection"]
-        geot    = self.RasterInfo["GeoTransform"]
+        samples = self.raster_info["samples"]
+        lines = self.raster_info["lines"]
+        proj = self.raster_info["projection"]
+        geot = self.raster_info["geotransform"]
 
         # Create the memory dataset into which the features will be rasterised
-        img_ds = createMemoryDataset(samples=samples, lines=lines, Projection=proj, 
-                     GeoTransform=geot)
+        img_ds = create_memory_dataset(samples=samples, lines=lines,
+                                       projection=proj, geotransform=geot)
 
         # Open the vector dataset and retrieve the first layer
-        vec_ds = ogr.Open(self.VectorFname)
-        layer  = vec_ds.GetLayer(0)
+        vec_ds = ogr.Open(self.vector_fname)
+        layer = vec_ds.GetLayer(0)
 
-        if self.SameProjection:
+        if self.same_projection:
             # Rasterise the vector into image segments/rois
-            rasteriseVector(imageDataset=img_ds, vectorLayer=layer)
+            rasterise_vector(image_dataset=img_ds, vector_layer=layer)
         else:
             # Initialise the image and vector spatial reference
             img_srs = osr.SpatialReference()
             vec_srs = osr.SpatialReference()
             img_srs.ImportFromWkt(proj)
-            vec_srs.ImportFromWkt(self.VectorInfo["Projection"])
+            vec_srs.ImportFromWkt(self.vector_info["projection"])
 
             # Project the vector
-            projectVector(layer, from_srs=vec_srs, to_srs=img_srs)
+            project_vector(layer, from_srs=vec_srs, to_srs=img_srs)
 
             # Rasterise the vector into image segments/rois
-            rasteriseVector(imageDataset=img_ds, vectorLayer=layer)
+            rasterise_vector(image_dataset=img_ds, vector_layer=layer)
 
         # Read the segmented array
-        self.segemented_array = img_ds.ReadAsArray()
+        self.segmented_array = img_ds.ReadAsArray()
 
         # Close the image and vector datasets
         img_ds = None
         vec_ds = None
-
