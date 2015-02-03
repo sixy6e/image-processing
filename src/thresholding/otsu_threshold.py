@@ -29,7 +29,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import numpy
 from IDL_functions import histogram
 
-def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=True, Apply=False):
+def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
+                   Fast=True, Apply=False):
     """
     Calculates the Otsu threshold.
 
@@ -40,23 +41,33 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
         A numpy array of maximum three dimensions.
 
     :param Fast:
-        Default is True. Will find the optimal threshold using the fast method which approximates the mean value per class.
+        Default is True. Will find the optimal threshold using the fast method
+        which approximates the mean value per class.
 
     :param Apply:
-        Default is False. If True then a mask/masks of the same dimensions as image will be returned. Otherwise only the threshold/thresholds will be returned.
+        Default is False. If True then a mask/masks of the same dimensions as
+        image will be returned. Otherwise only the threshold/thresholds will be
+        returned.
 
     :param Binsize:
-        (Optional) The binsize (Default is 1) to be used for creating the histogram.
+        (Optional) The binsize (Default is 1) to be used for creating the
+        histogram.
 
     :param Max:
-        (Optional) The maximum value to be used in creating the histogram. If not specified the array will be searched for max.
+        (Optional) The maximum value to be used in creating the histogram. If
+        not specified the array will be searched for max.
 
-    :param Min: (Optional) The minimum value to be used in creating the histogram. If not specified the array will be searched for min.
+    :param Min:
+        (Optional) The minimum value to be used in creating the histogram. If
+        not specified the array will be searched for min.
 
-    :param Nbins: (Optional) The number of bins to be used for creating the histogram. If set binsize is calculated as (max - min) / (nbins - 1), and the max value will be adjusted to (nbins*binsize + min).
+    :param Nbins:
+        (Optional) The number of bins to be used for creating the histogram.
+        If set binsize is calculated as (max - min) / (nbins - 1), and the max
+        value will be adjusted to (nbins*binsize + min).
           
     :author:
-        Josh Sixsmith, joshua.sixsmith@ga.gov.au
+        Josh Sixsmith, joshua.sixsmith@gmail.com
 
     :history:
         * 06/02/2013--Created
@@ -69,14 +80,14 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
         http://en.wikipedia.org/wiki/Otsu's_method
 
     """
-
     if image == None:
         print 'No input image!!!'
         return None
 
     dims = image.shape
     if (len(dims) > 3):
-        print 'Incorrect shape!; More than 3 dimensions is not a standard image.'
+        msg = 'Incorrect shape!; image must be 2 or 3 dimensions.'
+        print msg
         return None
 
     if Fast:
@@ -87,13 +98,14 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             for b in range(bands):
                 img = image[b].flatten()
 
-                h = histogram(img, locations='loc', omin='omin', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
+                h = histogram(img, locations='loc', omin='omin',
+                              binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
                 hist = h['histogram']
                 omin = h['omin']
-                loc  = h['loc']
+                loc = h['loc']
                 binsz = numpy.abs(loc[1] - loc[0])
 
-                cumu_hist  = numpy.cumsum(hist, dtype=float)
+                cumu_hist = numpy.cumsum(hist, dtype=float)
                 rcumu_hist = numpy.cumsum(hist[::-1], dtype=float) # reverse
 
                 total = cumu_hist[-1]
@@ -104,8 +116,10 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
                 mean_bground = numpy.zeros(hist.shape[0])
                 mean_fground = numpy.zeros(hist.shape[0])
                 mean_bground[0:-1] = (numpy.cumsum(hist * loc) / cumu_hist)[0:-1]
-                mean_fground[0:-1] = ((numpy.cumsum(hist[::-1] * loc[::-1]) / rcumu_hist)[::-1])[1:]
-                sigma_between = bground_weights * fground_weights *(mean_bground - mean_fground)**2
+                mean_fground[0:-1] = ((numpy.cumsum(hist[::-1] * loc[::-1]) /
+                                       rcumu_hist)[::-1])[1:]
+                sigma_between = bground_weights * fground_weights *
+                                (mean_bground - mean_fground)**2
                 thresh = numpy.argmax(sigma_between)
                 thresh = (thresh * binsz) + omin
 
@@ -121,13 +135,14 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
 
         elif (len(dims) == 2):
             img = image.flatten()
-            h = histogram(img, locations='loc', omin='omin', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
+            h = histogram(img, locations='loc', omin='omin', binsize=Binsize,
+                          Max=Max, Min=Min, nbins=Nbins)
             hist = h['histogram']
             omin = h['omin']
-            loc  = h['loc']
+            loc = h['loc']
             binsz = numpy.abs(loc[1] - loc[0])
  
-            cumu_hist  = numpy.cumsum(hist, dtype=float)
+            cumu_hist = numpy.cumsum(hist, dtype=float)
             rcumu_hist = numpy.cumsum(hist[::-1], dtype=float) # reverse
  
             total = cumu_hist[-1]
@@ -138,8 +153,10 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             mean_bground = numpy.zeros(hist.shape[0])
             mean_fground = numpy.zeros(hist.shape[0])
             mean_bground[0:-1] = (numpy.cumsum(hist * loc) / cumu_hist)[0:-1]
-            mean_fground[0:-1] = ((numpy.cumsum(hist[::-1] * loc[::-1]) / rcumu_hist)[::-1])[1:]
-            sigma_between = bground_weights * fground_weights *(mean_bground - mean_fground)**2
+            mean_fground[0:-1] = ((numpy.cumsum(hist[::-1] * loc[::-1]) /
+                                   rcumu_hist)[::-1])[1:]
+            sigma_between = bground_weights * fground_weights *
+                            (mean_bground - mean_fground)**2
             thresh = numpy.argmax(sigma_between)
             thresh = (thresh * binsz) + omin
  
@@ -152,13 +169,14 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
                 return threshold
 
         elif (len(dims) == 1):
-            h = histogram(image, locations='loc', omin='omin', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
+            h = histogram(image, locations='loc', omin='omin', binsize=Binsize,
+                          Max=Max, Min=Min, nbins=Nbins)
             hist = h['histogram']
             omin = h['omin']
-            loc  = h['loc']
+            loc = h['loc']
             binsz = numpy.abs(loc[1] - loc[0])
 
-            cumu_hist  = numpy.cumsum(hist, dtype=float)
+            cumu_hist = numpy.cumsum(hist, dtype=float)
             rcumu_hist = numpy.cumsum(hist[::-1], dtype=float) # reverse
 
             total = cumu_hist[-1]
@@ -171,8 +189,10 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             mean_bground = numpy.zeros(hist.shape[0])
             mean_fground = numpy.zeros(hist.shape[0])
             mean_bground[0:-1] = (numpy.cumsum(hist * loc) / cumu_hist)[0:-1]
-            mean_fground[0:-1] = ((numpy.cumsum(hist[::-1] * loc[::-1]) / rcumu_hist)[::-1])[1:]
-            sigma_between = bground_weights * fground_weights *(mean_bground - mean_fground)**2
+            mean_fground[0:-1] = ((numpy.cumsum(hist[::-1] * loc[::-1]) /
+                                   rcumu_hist)[::-1])[1:]
+            sigma_between = bground_weights * fground_weights *
+                            (mean_bground - mean_fground)**2
             thresh = numpy.argmax(sigma_between)
             thresh = (thresh * binsz) + omin
 
@@ -191,12 +211,14 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             bands = dims[0]
             for b in range(bands):
                 img = image[b].flatten()
-                h = histogram(img, reverse_indices='ri', omin='omin', locations='loc', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
+                h = histogram(img, reverse_indices='ri', omin='omin',
+                              locations='loc', binsize=Binsize, Max=Max,
+                              Min=Min, nbins=Nbins)
 
                 hist = h['histogram']
-                ri   = h['ri']
+                ri = h['ri']
                 omin = h['omin']
-                loc  = h['loc']
+                loc = h['loc']
 
                 nbins = hist.shape[0]
                 binsz = numpy.abs(loc[1] - loc[0])
@@ -205,7 +227,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
                 total = nB[-1]
                 nF = total - nB
         
-                # should't be a problem to start at zero. best_sigma should (by design) always be positive
+                # should't be a problem to start at zero. best_sigma should
+                # (by design) always be positive
                 best_sigma = 0
                 # set to loc[0], thresholds can be negative
                 optimal_t = loc[0]
@@ -213,8 +236,10 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
                 for i in range(nbins):
                     # get bin zero to the threshold 'i', then 'i' to nbins
                     if ((ri[i+1] > ri[0]) and (ri[nbins] > ri[i+1])):
-                        mean_b = numpy.mean(img[ri[ri[0]:ri[i+1]]], dtype='float64')
-                        mean_f = numpy.mean(img[ri[ri[i+1]:ri[nbins]]], dtype='float64')
+                        mean_b = numpy.mean(img[ri[ri[0]:ri[i+1]]],
+                                            dtype='float64')
+                        mean_f = numpy.mean(img[ri[ri[i+1]:ri[nbins]]],
+                                            dtype='float64')
                         sigma_btwn = nB[i]*nF[i]*((mean_b - mean_f)**2)
                         if (sigma_btwn > best_sigma):
                             best_sigma = sigma_btwn
@@ -233,12 +258,14 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             
         elif (len(dims) == 2):
             img = image.flatten()
-            h = histogram(img, reverse_indices='ri', omin='omin', locations='loc', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
+            h = histogram(img, reverse_indices='ri', omin='omin',
+                          locations='loc', binsize=Binsize, Max=Max, Min=Min,
+                          nbins=Nbins)
 
             hist = h['histogram']
-            ri   = h['ri']
+            ri = h['ri']
             omin = h['omin']
-            loc  = h['loc']
+            loc = h['loc']
 
             nbins = hist.shape[0]
             binsz = numpy.abs(loc[1] - loc[0])
@@ -247,7 +274,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             total = nB[-1]
             nF = total - nB
         
-            # should't be a problem to start at zero. best_sigma should (by design) always be positive
+            # should't be a problem to start at zero. best_sigma should
+            # (by design) always be positive
             best_sigma = 0
             # set to loc[0], thresholds can be negative
             optimal_t = loc[0]
@@ -255,8 +283,10 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             for i in range(nbins):
                 # get bin zero to the threshold 'i', then 'i' to nbins
                 if ((ri[i+1] > ri[0]) and (ri[nbins] > ri[i+1])):
-                    mean_b = numpy.mean(img[ri[ri[0]:ri[i+1]]], dtype='float64')
-                    mean_f = numpy.mean(img[ri[ri[i+1]:ri[nbins]]], dtype='float64')
+                    mean_b = numpy.mean(img[ri[ri[0]:ri[i+1]]],
+                                        dtype='float64')
+                    mean_f = numpy.mean(img[ri[ri[i+1]:ri[nbins]]],
+                                        dtype='float64')
                     sigma_btwn = nB[i]*nF[i]*((mean_b - mean_f)**2)
                     if (sigma_btwn > best_sigma):
                         best_sigma = sigma_btwn
@@ -270,12 +300,14 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
                 return threshold
 
         elif (len(dims) == 1):
-            h = histogram(image, reverse_indices='ri', omin='omin', locations='loc', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
+            h = histogram(image, reverse_indices='ri', omin='omin',
+                          locations='loc', binsize=Binsize, Max=Max, Min=Min,
+                          nbins=Nbins)
 
             hist = h['histogram']
-            ri   = h['ri']
+            ri = h['ri']
             omin = h['omin']
-            loc  = h['loc']
+            loc = h['loc']
 
             nbins = hist.shape[0]
             binsz = numpy.abs(loc[1] - loc[0])
@@ -284,7 +316,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             total = nB[-1]
             nF = total - nB
 
-            # should't be a problem to start at zero. best_sigma should (by design) always be positive
+            # should't be a problem to start at zero. best_sigma should
+            # (by design) always be positive
             best_sigma = 0
             # set to loc[0], thresholds can be negative
             optimal_t = loc[0]
@@ -292,8 +325,10 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
             for i in range(nbins):
                 # get bin zero to the threshold 'i', then 'i' to nbins
                 if ((ri[i+1] > ri[0]) and (ri[nbins] > ri[i+1])):
-                    mean_b = numpy.mean(image[ri[ri[0]:ri[i+1]]], dtype='float64')
-                    mean_f = numpy.mean(image[ri[ri[i+1]:ri[nbins]]], dtype='float64')
+                    mean_b = numpy.mean(image[ri[ri[0]:ri[i+1]]],
+                                        dtype='float64')
+                    mean_f = numpy.mean(image[ri[ri[i+1]:ri[nbins]]],
+                                        dtype='float64')
                     sigma_btwn = nB[i]*nF[i]*((mean_b - mean_f)**2)
                     if (sigma_btwn > best_sigma):
                         best_sigma = sigma_btwn
@@ -305,4 +340,3 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None, Fast=Tru
                 return mask
             else:
                 return threshold
-            

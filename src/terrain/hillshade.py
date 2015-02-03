@@ -57,10 +57,12 @@ def slope_aspect(array, pix_size, scale):
 
 def calc_hillshade(slope, aspect, azimuth, elevation):
 
-    az       = numpy.deg2rad(360 - azimuth + 90)
-    zenith   = numpy.deg2rad(90 - elevation)
+    az = numpy.deg2rad(360 - azimuth + 90)
+    zenith = numpy.deg2rad(90 - elevation)
     # Calculate the cosine of the solar incident angle normal to the surface
-    hs       = numexpr.evaluate("cos(zenith) * cos(slope) + (sin(zenith) * sin(slope) * cos(az - aspect))")
+    exp = ("cos(zenith) * cos(slope) + (sin(zenith) * sin(slope) *"
+           "cos(az - aspect))")
+    hs = numexpr.evaluate(exp)
     hs_scale = numpy.round(254 * hs +1)
     return hs_scale.astype('int')
 
@@ -70,8 +72,9 @@ def img2map(geoTransform, pixel):
     return (mapx,mapy)
 
 def map2img(geoTransform, location):
-    imgx = int(numpy.round((location[0] - geoTransform[0])/geoTransform[1]))
-    imgy = int(numpy.round((geoTransform[3] - location[1])/numpy.abs(geoTransform[5])))
+    imgx = int(numpy.round((location[0] - geoTransform[0]) / geoTransform[1]))
+    imgy = int(numpy.round((geoTransform[3] - location[1]) /
+                            numpy.abs(geoTransform[5])))
     return (imgy,imgx)
 
 def scale_array(image, GeoTransform):
@@ -84,8 +87,8 @@ def scale_array(image, GeoTransform):
     # Approx lattitude scale factors from ESRI help
     # http://webhelp.esri.com/arcgisdesktop/9.2/index.cfm?TopicName=Hillshade
     x = numpy.array([0,10,20,30,40,50,60,70,80])
-    y = numpy.array([898,912,956,1036,1171,1395,1792,2619,5156])/100000000.
-    yf   = interpolate.splrep(x,y)
+    y = numpy.array([898,912,956,1036,1171,1395,1792,2619,5156]) / 100000000.
+    yf = interpolate.splrep(x,y)
     yhat = interpolate.splev(latarray, yf)
 
     scalef_array = numpy.ones(dims, dtype=float)
@@ -94,13 +97,15 @@ def scale_array(image, GeoTransform):
     
     return scalef_array
 
-def hillshade(dem, elevation=45.0, azimuth=315.0, scalearray=False, scalefactor=1.0, projection=None, GeoTransform=None, outfile=None, driver='ENVI'):
-
+def hillshade(dem, elevation=45.0, azimuth=315.0, scalearray=False,
+              scalefactor=1.0, projection=None, GeoTransform=None,
+              outfile=None, driver='ENVI'):
     """
     Creates a hillshade from a DEM.
 
     :param dem:
-        Either a 2D Numpy array, or a string containing the full filepath name to a DEM on disk.
+        Either a 2D Numpy array, or a string containing the full filepath name
+        to a DEM on disk.
 
     :param elevation:
         Sun elevation angle in degrees. Defaults to 45 degrees.
@@ -109,10 +114,12 @@ def hillshade(dem, elevation=45.0, azimuth=315.0, scalearray=False, scalefactor=
         Sun azimuthal angle in degrees. Defaults to 315 degrees.
 
     :param scalearray:
-        If True, the process will create an array of scale factors for each row (scale factors change with lattitude).
+        If True, the process will create an array of scale factors for each row
+        (scale factors change with lattitude).
 
     :param scalefactor:
-        Include a scale factor if the image is in degrees (lat/long), eg 0.00000898. Defaults to 1.
+        Include a scale factor if the image is in degrees (lat/long), eg
+        0.00000898. Defaults to 1.
 
     :param projection:
         A GDAL like object containing the projection parameters of the DEM.
@@ -121,7 +128,8 @@ def hillshade(dem, elevation=45.0, azimuth=315.0, scalearray=False, scalefactor=
         A GDAL like object containing the GeoTransform parameters of the DEM.
 
     :param outfile:
-        A string containing the full filepath name to be used for the creating the output file. Optional.
+        A string containing the full filepath name to be used for the creating
+        the output file. Optional.
 
     :param driver:
         A string containing a GDAL compliant image driver. Defaults to ENVI.
@@ -145,7 +153,9 @@ def hillshade(dem, elevation=45.0, azimuth=315.0, scalearray=False, scalefactor=
         prj = iobj.GetProjection()
     else:
         if ((scalearray == True) & (GeoTransform == None)):
-            raise Exception("Can't calculate an array of scale factors without the geotransform information!")
+            msg = ("Can't calculate an array of scale factors without the"
+                   "geotransform information!")
+            raise Exception(msg)
         if ((GeoTransform == None) | (len(GeoTransform) != 6)):
             raise Exception("Invalid GeoTransform parameter!")
         image = dem
@@ -161,7 +171,8 @@ def hillshade(dem, elevation=45.0, azimuth=315.0, scalearray=False, scalefactor=
     else:
         scale_factor = scalefactor
 
-    slope, aspect = slope_aspect(array=image, pix_size=geoT[1], scale=scale_factor)
+    slope, aspect = slope_aspect(array=image, pix_size=geoT[1],
+                                 scale=scale_factor)
     hshade = calc_hillshade(slope, aspect, azimuth, elevation)
 
     if (outfile == None):
@@ -177,7 +188,8 @@ def hillshade(dem, elevation=45.0, azimuth=315.0, scalearray=False, scalefactor=
         #outband.WriteArray(hshade)
         #outds.FlushCache()
         #outds = None
-        image_tools.write_img(hshade, name=outfile, format=driver, projection=prj, geotransform=geoT)
+        image_tools.write_img(hshade, name=outfile, format=driver,
+                              projection=prj, geotransform=geoT)
 
 if __name__ == '__main__':
 
@@ -209,6 +221,6 @@ if __name__ == '__main__':
 
     out_name = parsed_args.outfile
 
-    hillshade(dem=ifile, elevation=elev, azimuth=azi, scalearray=sarray, scalefactor=scale_factor, projection=None, GeoTransform=None, outfile=out_name, driver=drv)
-
-
+    hillshade(dem=ifile, elevation=elev, azimuth=azi, scalearray=sarray,
+              scalefactor=scale_factor, projection=None, GeoTransform=None,
+              outfile=out_name, driver=drv)

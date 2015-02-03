@@ -21,8 +21,9 @@ def generate_tiles(samples, lines, xtile=100,ytile=100):
         Default is 100.
 
     :return:
-        A list of tuples containing the precalculated tiles used for indexing a larger array.
-        Each tuple contains (ystart,yend,xstart,xend)
+        A list of tuples containing the precalculated tiles used for indexing
+        a larger array.
+        Each tuple contains (ystart,yend,xstart,xend).
 
     Example:
 
@@ -158,8 +159,8 @@ class Raster:
     PQ validation
     various band math equations (NDVI is one case)
     """
-    def __init__(self, fname, file_format='ENVI', samples=None, lines=None, bands=1,
-                 data_type=None, inherits_from=None, metadata=None):
+    def __init__(self, fname, file_format='ENVI', samples=None, lines=None,
+                 bands=1, data_type=None, inherits_from=None, metadata=None):
         """
 
         """

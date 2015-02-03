@@ -46,14 +46,13 @@ def calculate_triangle_threshold(histogram):
         the input data, scale the threshold via the binsize and the
         starting bin location.
     """
-
     mx_loc = numpy.argmax(histogram)
-    mx     = histogram[mx]
+    mx = histogram[mx]
 
     # Find the first and last non-zero elements
     wh = numpy.where(histogram != 0)
     first_non_zero = wh[0][0]
-    last_non_zero  = wh[0][-1]
+    last_non_zero = wh[0][-1]
 
     # Horizontal distance
     if (abs(left_span) > abs(right_span)):
@@ -62,7 +61,7 @@ def calculate_triangle_threshold(histogram):
         x_dist = right_span
 
     # Get the distances for the left span and the right span
-    left_span  = first_non_zero - mx_loc
+    left_span = first_non_zero - mx_loc
     right_span = last_non_zero - mx_loc
 
     # Get the farthest non-zero point from the histogram peak
@@ -103,43 +102,55 @@ def calculate_triangle_threshold(histogram):
 
     return thresh
 
-def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None, Apply=True, Invert=False):
+def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None,
+                       Apply=True, Invert=False):
     """
     Calculates a threshold and optionally creates a binary mask from an array 
     using the Triangle threshold method.
 
     The threshold is calculated as the point of maximum perpendicular distance
-    of a line between the histogram peak and the farthest non-zero histogram edge
-    to the histogram.
+    of a line between the histogram peak and the farthest non-zero histogram
+    edge to the histogram.
 
     :param image:
         A numpy array.
 
     :param Apply:
-        Default is False. If True then a mask of the same dimensions as array will be returned.
-        Otherwise only the threshold will be returned.
+        Default is False. If True then a mask of the same dimensions as array
+        will be returned. Otherwise only the threshold will be returned.
 
     :param Binsize:
-        (Optional) The binsize (Default is 1) to be used for creating the histogram.
+        (Optional) The binsize (Default is 1) to be used for creating the
+        histogram.
 
     :param Max:
-        (Optional) The maximum value to be used in creating the histogram. If not specified the array will be searched for max.
+        (Optional) The maximum value to be used in creating the histogram. If
+        not specified the array will be searched for max.
 
     :param Min:
-        (Optional) The minimum value to be used in creating the histogram. If not specified the array will be searched for min.
+        (Optional) The minimum value to be used in creating the histogram. If
+        not specified the array will be searched for min.
 
     :param Nbins:
         (Optional) The number of bins to be used for creating the histogram. 
-        If set binsize is calculated as (max - min) / (nbins - 1), and the max value will be adjusted to (nbins*binsize + min).
+        If set binsize is calculated as (max - min) / (nbins - 1), and the max
+        value will be adjusted to (nbins*binsize + min).
 
     :param Apply:
-        If True (Default), then the threshold will be applied and an array of type bool will be returned.
-        Otherwise just the threshold will be returned.
+        If True (Default), then the threshold will be applied and an array of
+        type bool will be returned. Otherwise just the threshold will be
+        returned.
 
     :param Invert:
-        If True (Default is False), then the returned mask will be inverted. Only valid if Apply=True.
-        The inverted mask is applied as (array < threshold) & (array >= min).
-        The non-inverted mask is applied as (array >= threshold) & (array <= max)
+        If True (Default is False), then the returned mask will be inverted.
+        Only valid if Apply=True.
+        The inverted mask is applied as:
+
+        (array < threshold) & (array >= min).
+
+        The non-inverted mask is applied as:
+
+        (array >= threshold) & (array <= max)
 
     :author:
         Josh Sixsmith, josh.sixsmith@gmail.com
@@ -149,8 +160,8 @@ def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None, Appl
 
     :sources:
         G.W. Zack, W.E. Rogers, and S.A. Latt. Automatic measurement of sister
-            chromatid exchange frequency. Journal of Histochemistry & Cytochemistry,
-            25(7):741, 1977. 1, 2.1
+            chromatid exchange frequency. Journal of Histochemistry &
+            Cytochemistry, 25(7):741, 1977. 1, 2.1
     """
 
     if array == None:
@@ -159,12 +170,13 @@ def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None, Appl
     dims = array.shape
 
     arr = array.flatten()
-    h = histogram(arr, locations='loc', omax='omax', omin='omin', binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
+    h = histogram(arr, locations='loc', omax='omax', omin='omin',
+                  binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
 
     hist = h['histogram']
     omin = h['omin']
     omax = h['omax']
-    loc  = h['loc']
+    loc = h['loc']
     binsz = numpy.abs(loc[1] - loc[0])
 
     # Calculate the threshold
@@ -180,9 +192,11 @@ def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None, Appl
 
     return threshold
 
-def input_output_main(infile, outfile, driver='ENVI', Max=None, Min=None, binsize=None, nbins=None, invert=invert):
+def input_output_main(infile, outfile, driver='ENVI', Max=None, Min=None,
+                      binsize=None, nbins=None, invert=invert):
     """
-    A function to handle the input and ouput of image files.  GDAL is used for reading and writing files to and from the disk.
+    A function to handle the input and ouput of image files.  GDAL is used for
+    reading and writing files to and from the disk.
     This function also acts as main when called from the command line.
 
     :param infile:
@@ -195,24 +209,38 @@ def input_output_main(infile, outfile, driver='ENVI', Max=None, Min=None, binsiz
         A string containing a GDAL compliant image driver. Defaults to ENVI.
 
     :param Max:
-        (Optional) The maximum value to be used in creating the histogram. If not specified the array will be searched for max.
+        (Optional) The maximum value to be used in creating the histogram. If
+        not specified the array will be searched for max.
 
     :param Min:
-        (Optional) The minimum value to be used in creating the histogram. If not specified the array will be searched for min.
+        (Optional) The minimum value to be used in creating the histogram.
+        If not specified the array will be searched for min.
 
     :param Binsize:
-        (Optional) The binsize (Default is 1) to be used for creating the histogram.
+        (Optional) The binsize (Default is 1) to be used for creating the
+        histogram.
 
     :param Nbins:
         (Optional) The number of bins to be used for creating the histogram. 
-        If set binsize is calculated as (max - min) / (nbins - 1), and the max value will be adjusted to (nbins*binsize + min).
+        If set binsize is calculated as:
+
+        (max - min) / (nbins - 1)
+
+        and the max value will be adjusted to:
+
+        (nbins*binsize + min).
 
     :param Invert:
-        If True (Default is False), then the returned mask will be inverted. Only valid if Apply=True.
-        The inverted mask is applied as (array < threshold) & (array >= min).
-        The non-inverted mask is applied as (array >= threshold) & (array <= max)
-    """
+        If True (Default is False), then the returned mask will be inverted.
+        Only valid if Apply=True.
+        The inverted mask is applied as:
 
+        (array < threshold) & (array >= min).
+
+        The non-inverted mask is applied as:
+
+        (array >= threshold) & (array <= max)
+    """
     # Get image information
     ds   = gdal.Open(infile)
     img  = ds.ReadAsArray()
@@ -220,10 +248,12 @@ def input_output_main(infile, outfile, driver='ENVI', Max=None, Min=None, binsiz
     geoT = ds.GetGeoTransform()
 
     # Run the threshold algorithm
-    mask = triangle_threshold(array=img, Binsize=binsize, Max=Max, Min=Min, Nbins=Nbins, Invert=invert)
+    mask = triangle_threshold(array=img, Binsize=binsize, Max=Max, Min=Min,
+                              Nbins=Nbins, Invert=invert)
 
     # Write the file to disk
-    image_tools.write_img(shadow_mask, name=outfile, format=driver, projection=proj, geotransform=geoT)
+    image_tools.write_img(shadow_mask, name=outfile, format=driver,
+                          projection=proj, geotransform=geoT)
 
 
 if __name__ == '__main__':
@@ -253,5 +283,5 @@ if __name__ == '__main__':
     invert  = parsed_args.invert
 
     # Run main
-    input_output_main(infile, outfile, driver=drv, Max=mx_, Min=mn_, binsize=binsz, nbins=nbins, invert=invert)
-
+    input_output_main(infile, outfile, driver=drv, Max=mx_, Min=mn_,
+                      binsize=binsz, nbins=nbins, invert=invert)
