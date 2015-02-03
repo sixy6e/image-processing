@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-import sys
 import argparse
 import numpy
 import numexpr
@@ -48,12 +47,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 def slope_aspect(array, pix_size, scale):
-    dzdx = ndimage.sobel(array, axis=1)/(8.*pix_size)
-    dzdy = ndimage.sobel(array, axis=0)/(8.*pix_size)
-    hyp = numpy.hypot(dzdx,dzdy)
-    slp = numexpr.evaluate("arctan(hyp * scale)")
-    asp = numexpr.evaluate("arctan2(dzdy, -dzdx)")
-    return slp, asp
+    dzdx = ndimage.sobel(array, axis=1) / (8.* pix_size)
+    dzdy = ndimage.sobel(array, axis=0) / (8. * pix_size)
+    hypot = numpy.hypot(dzdx,dzdy)
+    slope = numexpr.evaluate("arctan(hypot * scale)")
+    aspect = numexpr.evaluate("arctan2(dzdy, -dzdx)")
+    return slope, aspect
 
 def calc_hillshade(slope, aspect, azimuth, elevation):
 
@@ -66,39 +65,40 @@ def calc_hillshade(slope, aspect, azimuth, elevation):
     hs_scale = numpy.round(254 * hs +1)
     return hs_scale.astype('int')
 
-def img2map(geoTransform, pixel):
-    mapx = pixel[1] * geoTransform[1] + geoTransform[0]
-    mapy = geoTransform[3] - (pixel[0] * (numpy.abs(geoTransform[5])))
-    return (mapx,mapy)
+def img2map(geotransform, pixel):
+    mapx = pixel[1] * geotransform[1] + geotransform[0]
+    mapy = geotransform[3] - (pixel[0] * (numpy.abs(geotransform[5])))
+    return (mapx, mapy)
 
-def map2img(geoTransform, location):
-    imgx = int(numpy.round((location[0] - geoTransform[0]) / geoTransform[1]))
-    imgy = int(numpy.round((geoTransform[3] - location[1]) /
-                            numpy.abs(geoTransform[5])))
-    return (imgy,imgx)
+def map2img(geotransform, location):
+    imgx = int(numpy.round((location[0] - geotransform[0]) / geotransform[1]))
+    imgy = int(numpy.round((geotransform[3] - location[1]) /
+                            numpy.abs(geotransform[5])))
+    return (imgy, imgx)
 
-def scale_array(image, GeoTransform):
+def scale_array(image, geotransform):
     latlist = []
     dims = image.shape
     for row in range(dims[0]):
-        latlist.append(img2map(GeoTransform, pixel=(row,0))[1])
+        latlist.append(img2map(geotransform, pixel=(row, 0))[1])
     latarray = numpy.abs(numpy.array(latlist))
 
     # Approx lattitude scale factors from ESRI help
     # http://webhelp.esri.com/arcgisdesktop/9.2/index.cfm?TopicName=Hillshade
-    x = numpy.array([0,10,20,30,40,50,60,70,80])
-    y = numpy.array([898,912,956,1036,1171,1395,1792,2619,5156]) / 100000000.
-    yf = interpolate.splrep(x,y)
+    x = numpy.array([0, 10, 20, 30, 40, 50, 60, 70, 80])
+    y = (numpy.array([898, 912, 956, 1036, 1171, 1395, 1792, 2619, 5156]) /
+         100000000.)
+    yf = interpolate.splrep(x, y)
     yhat = interpolate.splev(latarray, yf)
 
-    scalef_array = numpy.ones(dims, dtype=float)
+    scale_factor_array = numpy.ones(dims, dtype=float)
     for col in range(dims[1]):
-        scalef_array[:,col] *= yhat
+        scale_factor_array[:, col] *= yhat
     
-    return scalef_array
+    return scale_factor_array
 
-def hillshade(dem, elevation=45.0, azimuth=315.0, scalearray=False,
-              scalefactor=1.0, projection=None, GeoTransform=None,
+def hillshade(dem, elevation=45.0, azimuth=315.0, scale_array=False,
+              scale_factor=1.0, projection=None, geotransform=None,
               outfile=None, driver='ENVI'):
     """
     Creates a hillshade from a DEM.
@@ -113,19 +113,19 @@ def hillshade(dem, elevation=45.0, azimuth=315.0, scalearray=False,
     :param azimuth:
         Sun azimuthal angle in degrees. Defaults to 315 degrees.
 
-    :param scalearray:
+    :param scale_array:
         If True, the process will create an array of scale factors for each row
         (scale factors change with lattitude).
 
-    :param scalefactor:
+    :param scale_factor:
         Include a scale factor if the image is in degrees (lat/long), eg
         0.00000898. Defaults to 1.
 
     :param projection:
         A GDAL like object containing the projection parameters of the DEM.
 
-    :param GeoTransform:
-        A GDAL like object containing the GeoTransform parameters of the DEM.
+    :param geotransform:
+        A GDAL like object containing the geotransform parameters of the DEM.
 
     :param outfile:
         A string containing the full filepath name to be used for the creating
@@ -149,29 +149,29 @@ def hillshade(dem, elevation=45.0, azimuth=315.0, scalearray=False,
         iobj = gdal.Open(dem, gdal.gdalconst.GA_ReadOnly)
         assert (iobj != None), "%s is not a valid image file!" %dem
         image = iobj.ReadAsArray()
-        geoT = iobj.GetGeoTransform()
+        geot = iobj.GetGeoTransform()
         prj = iobj.GetProjection()
     else:
-        if ((scalearray == True) & (GeoTransform == None)):
+        if ((scale_array == True) & (geotransform == None)):
             msg = ("Can't calculate an array of scale factors without the"
                    "geotransform information!")
             raise Exception(msg)
-        if ((GeoTransform == None) | (len(GeoTransform) != 6)):
-            raise Exception("Invalid GeoTransform parameter!")
+        if ((geotransform == None) | (len(geotransform) != 6)):
+            raise Exception("Invalid geotransform parameter!")
         image = dem
-        geoT  = GeoTransform
-        prj   = projection
+        geot = geotransform
+        prj = projection
 
     dims = image.shape
     if (len(dims) != 2):
         raise Exception("Array must be 2-Dimensional!")
 
-    if scalearray:
-        scale_factor = scale_array(image, geoT)
+    if scale_array:
+        scale_factor = scale_array(image, geot)
     else:
-        scale_factor = scalefactor
+        scale_factor = scale_factor
 
-    slope, aspect = slope_aspect(array=image, pix_size=geoT[1],
+    slope, aspect = slope_aspect(array=image, pix_size=geot[1],
                                  scale=scale_factor)
     hshade = calc_hillshade(slope, aspect, azimuth, elevation)
 
@@ -180,16 +180,8 @@ def hillshade(dem, elevation=45.0, azimuth=315.0, scalearray=False,
     else:
         if (type(outfile) != str):
             raise Exception("Invalid filename!")
-        #drvr = gdal.GetDriverByName(driver)
-        #outds  = drvr.Create(outfile, dims[1], dims[0], 1, gdal.GDT_Byte)
-        #outds.SetGeoTransform(geoT)
-        #outds.SetProjection(prj)
-        #outband = outds.GetRasterBand(1)
-        #outband.WriteArray(hshade)
-        #outds.FlushCache()
-        #outds = None
         image_tools.write_img(hshade, name=outfile, format=driver,
-                              projection=prj, geotransform=geoT)
+                              projection=prj, geotransform=geot)
 
 if __name__ == '__main__':
 
@@ -215,12 +207,12 @@ if __name__ == '__main__':
 
     scale_factor = parsed_args.sf
 
-    azi  = parsed_args.azi
+    azi = parsed_args.azi
     elev = parsed_args.elev
-    drv  = parsed_args.driver
+    drv = parsed_args.driver
 
     out_name = parsed_args.outfile
 
-    hillshade(dem=ifile, elevation=elev, azimuth=azi, scalearray=sarray,
-              scalefactor=scale_factor, projection=None, GeoTransform=None,
+    hillshade(dem=ifile, elevation=elev, azimuth=azi, scale_array=sarray,
+              scale_factor=scale_factor, projection=None, geotransform=None,
               outfile=out_name, driver=drv)
