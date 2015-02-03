@@ -118,8 +118,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
                 mean_bground[0:-1] = (numpy.cumsum(hist * loc) / cumu_hist)[0:-1]
                 mean_fground[0:-1] = ((numpy.cumsum(hist[::-1] * loc[::-1]) /
                                        rcumu_hist)[::-1])[1:]
-                sigma_between = bground_weights * fground_weights *
-                                (mean_bground - mean_fground)**2
+                sigma_between = (bground_weights * fground_weights *
+                                (mean_bground - mean_fground)**2)
                 thresh = numpy.argmax(sigma_between)
                 thresh = (thresh * binsz) + omin
 
@@ -155,8 +155,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
             mean_bground[0:-1] = (numpy.cumsum(hist * loc) / cumu_hist)[0:-1]
             mean_fground[0:-1] = ((numpy.cumsum(hist[::-1] * loc[::-1]) /
                                    rcumu_hist)[::-1])[1:]
-            sigma_between = bground_weights * fground_weights *
-                            (mean_bground - mean_fground)**2
+            sigma_between = (bground_weights * fground_weights *
+                            (mean_bground - mean_fground)**2)
             thresh = numpy.argmax(sigma_between)
             thresh = (thresh * binsz) + omin
  
@@ -191,8 +191,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
             mean_bground[0:-1] = (numpy.cumsum(hist * loc) / cumu_hist)[0:-1]
             mean_fground[0:-1] = ((numpy.cumsum(hist[::-1] * loc[::-1]) /
                                    rcumu_hist)[::-1])[1:]
-            sigma_between = bground_weights * fground_weights *
-                            (mean_bground - mean_fground)**2
+            sigma_between = (bground_weights * fground_weights *
+                            (mean_bground - mean_fground)**2)
             thresh = numpy.argmax(sigma_between)
             thresh = (thresh * binsz) + omin
 
