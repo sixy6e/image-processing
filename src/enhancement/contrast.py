@@ -185,7 +185,7 @@ def square_root(array, Min=None, Max=None, nbins=256, Top=None):
     dims = array.shape
 
     # Define the LUT function
-    fcn  = numpy.sqrt(numpy.arange(nbins).astype('float'))
+    fcn = numpy.sqrt(numpy.arange(nbins).astype('float'))
     bfcn = bytscl(fcn, Top=Top)
 
     # Get the desired binsize
@@ -239,7 +239,7 @@ def log(array, Min=None, Max=None, nbins=256, Top=None):
     dims = array.shape
 
     # Define the LUT function
-    fcn  = numpy.log(numpy.arange(nbins).astype('float') + 1)
+    fcn = numpy.log(numpy.arange(nbins).astype('float') + 1)
     bfcn = bytscl(fcn, Top=Top)
 
     # Get the desired binsize
