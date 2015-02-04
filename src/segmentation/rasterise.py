@@ -249,7 +249,7 @@ class Rasterise:
         samples = ds.RasterXSize
         lines = ds.RasterYSize
         bands = ds.RasterCount
-        proj = ds.Getprojection()
+        proj = ds.GetProjection()
         geot = ds.GetGeoTransform()
 
         self.raster_info["samples"] = samples
