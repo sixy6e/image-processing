@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='image_processing',
-      version = '1.0',
+      version = '0.1',
       package_dir = {'image_processing' : 'src'},
       packages = ['image_processing','image_processing.segmentation','image_processing.terrain','image_processing.thresholding'],
       author = 'Josh Sixsmith',
