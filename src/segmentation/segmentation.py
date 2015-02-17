@@ -166,7 +166,7 @@ class SegmentVisitor:
         return idx
 
 
-    def segment_mean(self, array, segment_ids=None):
+    def segment_mean(self, array, segment_ids=None, nan=False):
         """
         Calculates the mean value per segment given a 2D array containing data.
 
@@ -177,6 +177,10 @@ class SegmentVisitor:
         :param segment_ids:
             A list of integers corresponding to the segment_ids of interest.
             Default is to calculate the mean value for every segment.
+
+        :param nan:
+            A boolean indicating whether we check for occurences of NaN
+            during the mean calculation. Default is False.
 
         :return:
             A dictionary where each key corresponds to a segment ID, and
@@ -214,16 +218,24 @@ class SegmentVisitor:
         mean_seg = {}
 
         # Calculate the mean value per segment
-        for i in s:
-            if (hist[i] == 0):
-                continue
-            xbar = numpy.mean(arr_flat[ri[ri[i]:ri[i+1]]])
-            mean_seg[i] = xbar
+        # Do we check for the presence of NaN's
+        if nan:
+            for i in s:
+                if (hist[i] == 0):
+                    continue
+                xbar = numpy.nanmean(arr_flat[ri[ri[i]:ri[i+1]]])
+                mean_seg[i] = xbar
+        else:
+            for i in s:
+                if (hist[i] == 0):
+                    continue
+                xbar = numpy.mean(arr_flat[ri[ri[i]:ri[i+1]]])
+                mean_seg[i] = xbar
 
         return mean_seg
 
 
-    def segment_max(self, array, segment_ids=None):
+    def segment_max(self, array, segment_ids=None, nan=False):
         """
         Calculates the max value per segment given an array containing data.
 
@@ -234,6 +246,10 @@ class SegmentVisitor:
         :param segment_ids:
             A list of integers corresponding to the segment_ids of interest.
             Default is to calculate the maximum value for every segment.
+
+        :param nan:
+            A boolean indicating whether we check for occurences of NaN
+            during the max calculation. Default is False.
 
         :return:
             A dictionary where each key corresponds to a segment ID, and
@@ -271,16 +287,24 @@ class SegmentVisitor:
         max_seg = {}
 
         # Calculate the max value per segment
-        for i in s:
-            if (hist[i] == 0):
-                continue
-            mx_ = numpy.max(arr_flat[ri[ri[i]:ri[i+1]]])
-            max_seg[i] = mx_
+        # Do we check for the presence of NaN's
+        if nan:
+            for i in s:
+                if (hist[i] == 0):
+                    continue
+                mx_ = numpy.nanmax(arr_flat[ri[ri[i]:ri[i+1]]])
+                max_seg[i] = mx_
+        else:
+            for i in s:
+                if (hist[i] == 0):
+                    continue
+                mx_ = numpy.max(arr_flat[ri[ri[i]:ri[i+1]]])
+                max_seg[i] = mx_
 
         return max_seg
 
 
-    def segment_min(self, array, segment_ids=None):
+    def segment_min(self, array, segment_ids=None, nan=False):
         """
         Calculates the min value per segment given an array containing data.
 
@@ -291,6 +315,10 @@ class SegmentVisitor:
         :param segment_ids:
             A list of integers corresponding to the segment_ids of interest.
             Default is to calculate the minimum value for every segment.
+
+        :param nan:
+            A boolean indicating whether we check for occurences of NaN
+            during the min calculation. Default is False.
 
         :return:
             A dictionary where each key corresponds to a segment ID, and
@@ -328,16 +356,24 @@ class SegmentVisitor:
         min_seg = {}
 
         # Calculate the min value per segment
-        for i in s:
-            if (hist[i] == 0):
-                continue
-            mn_ = numpy.min(arr_flat[ri[ri[i]:ri[i+1]]])
-            min_seg[i] = mn_
+        # Do we check for the presence of NaN's
+        if nan:
+            for i in s:
+                if (hist[i] == 0):
+                    continue
+                mn_ = numpy.nanmin(arr_flat[ri[ri[i]:ri[i+1]]])
+                min_seg[i] = mn_
+        else:
+            for i in s:
+                if (hist[i] == 0):
+                    continue
+                mn_ = numpy.min(arr_flat[ri[ri[i]:ri[i+1]]])
+                min_seg[i] = mn_
 
         return min_seg
 
 
-    def segment_stddev(self, array, segment_ids=None):
+    def segment_stddev(self, array, segment_ids=None, nan=False):
         """
         Calculates the sample standard deviation per segment given an
         array containing data.
@@ -350,6 +386,10 @@ class SegmentVisitor:
         :param segment_ids:
             A list of integers corresponding to the segment_ids of interest.
             Default is to calculate the standard deviation for every segment.
+
+        :param nan:
+            A boolean indicating whether we check for occurences of NaN
+            during the standard deviation calculation. Default is False.
 
         :return:
             A dictionary where each key corresponds to a segment ID, and
@@ -386,12 +426,20 @@ class SegmentVisitor:
         # Initialise a dictionary to hold the max value per segment
         stddev_seg = {}
 
-        # Calculate the min value per segment
-        for i in s:
-            if (hist[i] == 0):
-                continue
-            stddev = numpy.std(arr_flat[ri[ri[i]:ri[i+1]]], ddof=1)
-            stddev_seg[i] = stddev
+        # Calculate the stddev value per segment
+        # Do we check for the presence of NaN's
+        if nan:
+            for i in s:
+                if (hist[i] == 0):
+                    continue
+                stddev = numpy.nanstd(arr_flat[ri[ri[i]:ri[i+1]]], ddof=1)
+                stddev_seg[i] = stddev
+        else:
+            for i in s:
+                if (hist[i] == 0):
+                    continue
+                stddev = numpy.std(arr_flat[ri[ri[i]:ri[i+1]]], ddof=1)
+                stddev_seg[i] = stddev
 
         return stddev_seg
 
