@@ -166,6 +166,76 @@ class SegmentVisitor:
         return idx
 
 
+    def segment_total(self, array, segment_ids=None, nan=False):
+        """
+        Calculates the total value per segment given a 2D array containing
+        data.
+
+        :param array:
+            A 2D NumPy array containing the data to be extracted given
+            a segment_id.
+
+        :param segment_ids:
+            A list of integers corresponding to the segment_ids of interest.
+            Default is to calculate the mean value for every segment.
+
+        :param nan:
+            A boolean indicating whether we check for occurences of NaN
+            during the total calculation. Default is False.
+
+        :return:
+            A dictionary where each key corresponds to a segment ID, and
+            each value is the total value for that segment ID.
+        """
+        arr_flat = array.ravel()
+        hist = self.histogram
+        ri = self.ri
+
+        if segment_ids:
+            if not isinstance(segment_ids, list):
+                msg = "segment_ids must be of type list!"
+                raise TypeError(msg)
+
+            # Get a unique listing of the segment_ids
+            s = numpy.unique(numpy.array(segment_ids))
+
+            # Evaluate the min and max to determine if we are outside the valid
+            # segment range
+            min_id = numpy.min(s)
+            max_id = numpy.max(s)
+            if not (min_id >= self.min_seg_id):
+                msg = "The minimum segment ID in the dataset is {}"
+                msg = msg.format(self.min_seg_id)
+                raise Exception(msg)
+            if not (max_id <= self.max_seg_id):
+                msg = "The maximum segment ID in the dataset is {}"
+                msg = msg.format(self.max_seg_id)
+                raise Exception(msg)
+        else:
+            # Create an index to loop over every segment
+            s = numpy.arange(1, hist.shape[0])
+
+        # Initialise a dictionary to hold the mean value per segment
+        total_seg = {}
+
+        # Calculate the mean value per segment
+        # Do we check for the presence of NaN's
+        if nan:
+            for i in s:
+                if (hist[i] == 0):
+                    continue
+                total = numpy.nansum(arr_flat[ri[ri[i]:ri[i+1]]])
+                total_seg[i] = total
+        else:
+            for i in s:
+                if (hist[i] == 0):
+                    continue
+                total = numpy.sum(arr_flat[ri[ri[i]:ri[i+1]]])
+                total_seg[i] = total
+
+        return total_seg
+
+
     def segment_mean(self, array, segment_ids=None, nan=False):
         """
         Calculates the mean value per segment given a 2D array containing data.
@@ -352,7 +422,7 @@ class SegmentVisitor:
             # Create an index to loop over every segment
             s = numpy.arange(1, hist.shape[0])
 
-        # Initialise a dictionary to hold the max value per segment
+        # Initialise a dictionary to hold the min value per segment
         min_seg = {}
 
         # Calculate the min value per segment
@@ -373,11 +443,11 @@ class SegmentVisitor:
         return min_seg
 
 
-    def segment_stddev(self, array, segment_ids=None, nan=False):
+    def segment_stddev(self, array, segment_ids=None, ddof=1, nan=False):
         """
-        Calculates the sample standard deviation per segment given an
-        array containing data.
-        The sample standard deviation uses 1 delta degrees of freedom.
+        Calculates the standard deviation per segment given an
+        array containing data. By default the sample standard deviation is
+        calculated which uses 1 delta degrees of freedom.
 
         :param array:
             A 2D NumPy array containing the data to be extracted given
@@ -386,6 +456,10 @@ class SegmentVisitor:
         :param segment_ids:
             A list of integers corresponding to the segment_ids of interest.
             Default is to calculate the standard deviation for every segment.
+
+        :param ddof:
+            Delta degrees of freedom. Default is 1 which calculates the sample
+            standard deviation.
 
         :param nan:
             A boolean indicating whether we check for occurences of NaN
@@ -423,7 +497,7 @@ class SegmentVisitor:
             # Create an index to loop over every segment
             s = numpy.arange(1, hist.shape[0])
 
-        # Initialise a dictionary to hold the max value per segment
+        # Initialise a dictionary to hold the std dev value per segment
         stddev_seg = {}
 
         # Calculate the stddev value per segment
@@ -432,13 +506,13 @@ class SegmentVisitor:
             for i in s:
                 if (hist[i] == 0):
                     continue
-                stddev = numpy.nanstd(arr_flat[ri[ri[i]:ri[i+1]]], ddof=1)
+                stddev = numpy.nanstd(arr_flat[ri[ri[i]:ri[i+1]]], ddof=ddof)
                 stddev_seg[i] = stddev
         else:
             for i in s:
                 if (hist[i] == 0):
                     continue
-                stddev = numpy.std(arr_flat[ri[ri[i]:ri[i+1]]], ddof=1)
+                stddev = numpy.std(arr_flat[ri[ri[i]:ri[i+1]]], ddof=ddof)
                 stddev_seg[i] = stddev
 
         return stddev_seg
@@ -486,7 +560,7 @@ class SegmentVisitor:
             # Create an index to loop over every segment
             s = numpy.arange(1, hist.shape[0])
 
-        # Initialise a dictionary to hold the max value per segment
+        # Initialise a dictionary to hold the area value per segment
         area_seg = {}
 
         for i in s:
@@ -593,3 +667,60 @@ class SegmentVisitor:
             self.reset_segment_ids()
         else:
             return array
+
+
+    def segment_bounding_box(self, segment_ids=None):
+        """
+        Calculates the minimum bounding box in pixel/array co-ordinates.
+
+        :param segment_ids:
+            A list of integers corresponding to the segment_ids of interest.
+            Default is to calculate the bounding box for every segment.
+
+        :return:
+            A dictionary where each key corresponds to a segment ID, and
+            each value is a tuple ((ystart, yend), (xstart, xend)) index
+            representing the bounding box for that segment ID.
+        """
+        hist = self.histogram
+        ri = self.ri
+
+        if segment_ids:
+            if not isinstance(segment_ids, list):
+                msg = "segment_ids must be of type list!"
+                raise TypeError(msg)
+
+            # Get a unique listing of the segment_ids
+            s = numpy.unique(numpy.array(segment_ids))
+
+            # Evaluate the min and max to determine if we are outside the valid
+            # segment range
+            min_id = numpy.min(s)
+            max_id = numpy.max(s)
+            if not (min_id >= self.min_seg_id):
+                msg = "The minimum segment ID in the dataset is {}"
+                msg = msg.format(self.min_seg_id)
+                raise Exception(msg)
+            if not (max_id <= self.max_seg_id):
+                msg = "The maximum segment ID in the dataset is {}"
+                msg = msg.format(self.max_seg_id)
+                raise Exception(msg)
+        else:
+            # Create an index to loop over every segment
+            s = numpy.arange(1, hist.shape[0])
+
+        # Initialise a dictionary to hold the boudng box per segment
+        yx_start_end_seg = {}
+
+        # Find the minimum bounding box per segment
+        for i in s:
+            if (hist[i] == 0):
+                continue
+            idx = ri[ri[i]:ri[i+1]]
+            idx = numpy.array(array_indices(self.dims, idx, dimensions=True))
+            min_yx = numpy.min(idx, axis=1)                                     
+            max_yx = numpy.max(idx, axis=1) + 1                                 
+            yx_start_end = ((min_yx[0], max_yx[0]), (min_yx[1], max_yx[1]))
+            yx_start_end_seg[i] = yx_start_end
+
+        return yx_start_end_seg
