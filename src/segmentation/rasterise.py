@@ -26,9 +26,12 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+import numpy
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+
+from EOtools.coordinates import convert_coordinates
 
 
 def create_memory_dataset(samples, lines, name='MemoryDataset', bands=1,
@@ -145,11 +148,34 @@ def rasterise_vector(image_dataset, vector_layer):
         >>> lyr = vec_ds.GetLayer(0)
         >>> rasterise_vector(image_dataset=ds, vector_layer=lyr)
     """
-    # Get the number of features contained in the layer
-    nfeatures = vector_layer.GetFeatureCount()
+    # We need to get the bounding box of the image to use as
+    # the basis for feature intersection. This potentially can reduce the
+    # number of iterations of rasterisation.
+    geotransform = image_dataset.GetGeoTransform()
+
+    samples = image_dataset.RasterXSize
+    lines = image_dataset.RasterYSize
+
+    img_bbox = [(0, 0), (samples, 0), (samples, lines), (0, lines)]
+    bbox = convert_coordinates(geotransform, img_bbox)
+
+    x = numpy.array([i[0] for i in bbox])
+    y = numpy.array([i[1] for i in bbox])
+    xmin = x.min()
+    xmax = x.max()
+    ymin = y.min()
+    ymax = y.max()
+
+    # Now to intersect the image bounding box (envelope)
+    fids = []
+    vector_layer.SetSpatialFilterRect(xmin, ymin, xmax, ymax)
+    for selected in vector_layer:
+        fids.append(selected.GetFID())
+    vector_layer.SetSpatialFilter(None)
+
 
     # Rasterise every feature based on it's FID value +1
-    for i in range(nfeatures):
+    for i in fids:
         vector_layer.SetAttributeFilter("FID = {fid}".format(fid=i))
         burn = i + 1
         gdal.RasterizeLayer(image_dataset, [1], vector_layer,
