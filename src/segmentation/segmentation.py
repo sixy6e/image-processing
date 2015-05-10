@@ -76,6 +76,7 @@ class SegmentVisitor:
 
         self.min_seg_id = None
         self.max_seg_id = None
+        self.n_segments = None
 
         self._find_segments()
 
@@ -100,6 +101,9 @@ class SegmentVisitor:
 
         self.min_seg_id = mn
         self.max_seg_id = mx
+
+        # Determine the number of segments
+        self.n_segments = (numpy.where(self.histogram[1:] > 0)[0]).shape[0]
 
 
     def get_segment_data(self, array, segment_id=1):
