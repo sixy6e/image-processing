@@ -77,6 +77,7 @@ class SegmentVisitor:
         self.min_seg_id = None
         self.max_seg_id = None
         self.n_segments = None
+        self.segment_ids = None
 
         self._find_segments()
 
@@ -102,8 +103,9 @@ class SegmentVisitor:
         self.min_seg_id = mn
         self.max_seg_id = mx
 
-        # Determine the number of segments
-        self.n_segments = (numpy.where(self.histogram[1:] > 0)[0]).shape[0]
+        # Determine the segment ids and the number of segments
+        self.segment_ids = numpy.where(self.histogram > 0)[0][1:]
+        self.n_segments = self.segment_ids.shape[0]
 
 
     def get_segment_data(self, array, segment_id=1):
@@ -216,8 +218,7 @@ class SegmentVisitor:
                 msg = msg.format(self.max_seg_id)
                 raise Exception(msg)
         else:
-            # Create an index to loop over every segment
-            s = numpy.arange(1, hist.shape[0])
+            s = self.segment_ids
 
         # Initialise a dictionary to hold the mean value per segment
         total_seg = {}
@@ -270,7 +271,7 @@ class SegmentVisitor:
                 raise TypeError(msg)
 
             # Get a unique listing of the segment_ids
-            s = numpy.unique(numpy.array(segment_ids))
+            s = self.segment_ids
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
@@ -355,7 +356,7 @@ class SegmentVisitor:
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = numpy.arange(1, hist.shape[0])
+            s = self.segment_ids
 
         # Initialise a dictionary to hold the max value per segment
         max_seg = {}
@@ -424,7 +425,7 @@ class SegmentVisitor:
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = numpy.arange(1, hist.shape[0])
+            s = self.segment_ids
 
         # Initialise a dictionary to hold the min value per segment
         min_seg = {}
@@ -499,7 +500,7 @@ class SegmentVisitor:
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = numpy.arange(1, hist.shape[0])
+            s = self.segment_ids
 
         # Initialise a dictionary to hold the std dev value per segment
         stddev_seg = {}
@@ -562,7 +563,7 @@ class SegmentVisitor:
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = numpy.arange(1, hist.shape[0])
+            s = self.segment_ids
 
         # Initialise a dictionary to hold the area value per segment
         area_seg = {}
@@ -711,7 +712,7 @@ class SegmentVisitor:
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = numpy.arange(1, hist.shape[0])
+            s = self.segment_ids
 
         # Initialise a dictionary to hold the boudng box per segment
         yx_start_end_seg = {}
