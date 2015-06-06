@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import numpy
-from idl_functions import histogram
 from idl_functions import hist_equal
 from idl_functions import bytscl
+
 
 def data_convert(scalar, dtype):
     """

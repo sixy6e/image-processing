@@ -120,7 +120,7 @@ def project_vector(vector_layer, from_srs, to_srs):
     drv = ogr.GetDriverByName('Memory')
     outds = drv.CreateDataSource('Memory')
     outlyr = outds.CreateLayer('Memory', srs=to_srs,
-                               geom_type=layer.GetGeomType())
+                               geom_type=vector_layer.GetGeomType())
 
     # Add layer field attributes
     in_layer_defn = vector_layer.GetLayerDefn()
@@ -144,7 +144,7 @@ def project_vector(vector_layer, from_srs, to_srs):
         for i in range(0, feature_defn.GetFieldCount()):
             out_feature.SetField(feature_defn.GetFieldDefn(i).GetNameRef(),
                                  feat.GetField(i))
-            outlyr.CreateFeature(out_deature)
+            outlyr.CreateFeature(out_feature)
 
     return outds
 

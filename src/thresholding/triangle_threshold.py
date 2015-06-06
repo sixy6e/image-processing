@@ -48,18 +48,12 @@ def calculate_triangle_threshold(histogram):
         starting bin location.
     """
     mx_loc = numpy.argmax(histogram)
-    mx = histogram[mx]
+    mx = histogram[mx_loc]
 
     # Find the first and last non-zero elements
     wh = numpy.where(histogram != 0)
     first_non_zero = wh[0][0]
     last_non_zero = wh[0][-1]
-
-    # Horizontal distance
-    if (abs(left_span) > abs(right_span)):
-        x_dist = left_span
-    else:
-        x_dist = right_span
 
     # Get the distances for the left span and the right span
     left_span = first_non_zero - mx_loc
@@ -71,8 +65,14 @@ def calculate_triangle_threshold(histogram):
     else:
         non_zero_point = last_non_zero
 
+    # Horizontal distance
+    if (abs(left_span) > abs(right_span)):
+        x_dist = left_span
+    else:
+        x_dist = right_span
+
     # Vertial distance
-    y_dist = h[non_zero_point] - mx
+    y_dist = histogram[non_zero_point] - mx
 
     # Gradient
     m = float(y_dist) / x_dist
@@ -86,7 +86,7 @@ def calculate_triangle_threshold(histogram):
     else:
         x1 = numpy.arange(abs(x_dist) + 1) + mx_loc
 
-    y1 = h[x1]
+    y1 = histogram[x1]
     y2 = m * x1 + b
 
     # Distances for each point along the line to the histogram
@@ -102,6 +102,7 @@ def calculate_triangle_threshold(histogram):
         thresh = thresh_loc + mx_loc
 
     return thresh
+
 
 def triangle_threshold(array, binsize=None, maxv=None, minv=None, nbins=None,
                        Apply=True, invert=False):
@@ -182,7 +183,7 @@ def triangle_threshold(array, binsize=None, maxv=None, minv=None, nbins=None,
 
     # Calculate the threshold
     threshold = calculate_triangle_threshold(histogram=hist)
-    thresh_convert = thresh * binsz + omin
+    thresh_convert = threshold * binsz + omin
 
     if Apply:
         if invert:
@@ -194,7 +195,7 @@ def triangle_threshold(array, binsize=None, maxv=None, minv=None, nbins=None,
     return threshold
 
 def input_output_main(infile, outfile, driver='ENVI', maxv=None, minv=None,
-                      binsize=None, nbins=None, invert=invert):
+                      binsize=None, nbins=None, invert=False):
     """
     A function to handle the input and ouput of image files.  GDAL is used for
     reading and writing files to and from the disk.
@@ -246,15 +247,15 @@ def input_output_main(infile, outfile, driver='ENVI', maxv=None, minv=None,
     ds   = gdal.Open(infile)
     img  = ds.ReadAsArray()
     proj = ds.GetProjection()
-    geoT = ds.GetGeoTransform()
+    geot = ds.GetGeoTransform()
 
     # Run the threshold algorithm
     mask = triangle_threshold(array=img, binsize=binsize, maxv=maxv, minv=minv,
-                              nbins=Nbins, invert=invert)
+                              nbins=nbins, invert=invert)
 
     # Write the file to disk
-    image_tools.write_img(shadow_mask, name=outfile, format=driver,
-                          projection=proj, geotransform=geoT)
+    write_img(mask, name=outfile, fmt=driver,
+              projection=proj, geotransform=geot)
 
 
 if __name__ == '__main__':
