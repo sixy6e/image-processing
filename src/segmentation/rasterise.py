@@ -31,7 +31,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from EOtools.coordinates import convert_coordinates
+from eotools.coordinates import convert_coordinates
 
 
 def create_memory_dataset(samples, lines, name='MemoryDataset', bands=1,
@@ -88,8 +88,7 @@ def create_memory_dataset(samples, lines, name='MemoryDataset', bands=1,
 
 def project_vector(vector_layer, from_srs, to_srs):
     """
-    Projects a layer from one co-ordinate system to another. The transformation
-    of each features' geometry occurs in-place.
+    Projects a layer from one co-ordinate system to another.
 
     :param vector_layer:
         An OGR layer object.
@@ -102,7 +101,7 @@ def project_vector(vector_layer, from_srs, to_srs):
         transform to.
 
     :return:
-        None. The projection transformation is done in place.
+        An in-memory ogr vector dataset containing the reprojected layer.
 
     Example:
 
@@ -112,16 +111,39 @@ def project_vector(vector_layer, from_srs, to_srs):
         >>> srs2 = osr.SpatialReference()
         >>> srs1.SetWellKnownGeogCS("WGS84")
         >>> srs2.SetWellKnownGeogCS("WGS72")
-        >>> project_vector(lyr, from_srs=srs1, to_srs=srs2)
+        >>> new_vec_ds = project_vector(lyr, from_srs=srs1, to_srs=srs2)
     """
-    # Define the transformation
+    # Create the output in-memory vector dataset
+    drv = ogr.GetDriverByName('Memory')
+    outds = drv.CreateDataSource('Memory')
+    outlyr = outds.CreateLayer('Memory', srs=to_srs,
+                               geom_type=layer.GetGeomType())
+
+    # Add layer field attributes
+    in_layer_defn = vector_layer.GetLayerDefn()
+    for i in range(0, in_layer_defn.GetFieldCount()):
+        field_defn = in_layer_defn.GetFieldDefn(i)
+        outlyr.CreateField(field_defn)
+
+    # Get the output layer's feature definition
+    feature_defn = outlyr.GetLayerDefn()
+
+    # Define the coordinate transformation
     tform = osr.CoordinateTransformation(from_srs, to_srs)
 
-    # Extract the geometry of every feature and transform it
-    # Note: Transformation is done in place!!!
+    # Loop through each feature, reproject, and set the field attributes
     for feat in vector_layer:
         geom = feat.GetGeometryRef()
         geom.Transform(tform)
+
+        out_feature = ogr.Feature(feature_defn)
+        out_feature.SetGeometry(geom)
+        for i in range(0, feature_defn.GetFieldCount()):
+            out_feature.SetField(feature_defn.GetFieldDefn(i).GetNameRef(),
+                                 feat.GetField(i))
+            outlyr.CreateFeature(out_deature)
+
+    return outds
 
 
 def rasterise_vector(image_dataset, vector_layer):
@@ -365,7 +387,8 @@ class Rasterise:
             vec_srs.ImportFromWkt(self.vector_info["projection"])
 
             # Project the vector
-            project_vector(layer, from_srs=vec_srs, to_srs=img_srs)
+            vec_ds = project_vector(layer, from_srs=vec_srs, to_srs=img_srs)
+            layer = vec_ds.GetLayer()
 
             # Rasterise the vector into image segments/rois
             rasterise_vector(image_dataset=img_ds, vector_layer=layer)
