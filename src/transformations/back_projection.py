@@ -7,7 +7,7 @@ def histogram_backprojection(array, roi, nbins=256):
     
     """
 
-    h = histogram(roi.ravel(), nbins=nbins, omin='omin', omax='omax',
+    h = histogram(roi, nbins=nbins, omin='omin', omax='omax',
                   locations='loc')
 
     hist = h['histogram']
