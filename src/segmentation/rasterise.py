@@ -103,6 +103,9 @@ def project_vector(vector_layer, from_srs, to_srs):
     :return:
         An in-memory ogr vector dataset containing the reprojected layer.
 
+    :notes:
+        See https://pcjericks.github.io/py-gdalogr-cookbook/projection.html
+
     Example:
 
         >>> vec_ds = ogr.Open(vec_fname)
