@@ -29,7 +29,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import argparse
 import numpy
 from osgeo import gdal
-from IDL_functions import histogram
+from idl_functions import histogram
+
 
 def calculate_triangle_threshold(histogram):
     """
@@ -102,8 +103,8 @@ def calculate_triangle_threshold(histogram):
 
     return thresh
 
-def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None,
-                       Apply=True, Invert=False):
+def triangle_threshold(array, binsize=None, maxv=None, minv=None, nbins=None,
+                       Apply=True, invert=False):
     """
     Calculates a threshold and optionally creates a binary mask from an array 
     using the Triangle threshold method.
@@ -119,19 +120,19 @@ def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None,
         Default is False. If True then a mask of the same dimensions as array
         will be returned. Otherwise only the threshold will be returned.
 
-    :param Binsize:
+    :param binsize:
         (Optional) The binsize (Default is 1) to be used for creating the
         histogram.
 
-    :param Max:
+    :param maxv:
         (Optional) The maximum value to be used in creating the histogram. If
         not specified the array will be searched for max.
 
-    :param Min:
+    :param minv:
         (Optional) The minimum value to be used in creating the histogram. If
         not specified the array will be searched for min.
 
-    :param Nbins:
+    :param nbins:
         (Optional) The number of bins to be used for creating the histogram. 
         If set binsize is calculated as (max - min) / (nbins - 1), and the max
         value will be adjusted to (nbins*binsize + min).
@@ -141,7 +142,7 @@ def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None,
         type bool will be returned. Otherwise just the threshold will be
         returned.
 
-    :param Invert:
+    :param invert:
         If True (Default is False), then the returned mask will be inverted.
         Only valid if Apply=True.
         The inverted mask is applied as:
@@ -171,7 +172,7 @@ def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None,
 
     arr = array.flatten()
     h = histogram(arr, locations='loc', omax='omax', omin='omin',
-                  binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
+                  binsize=binsize, maxv=maxv, minv=minv, nbins=nbins)
 
     hist = h['histogram']
     omin = h['omin']
@@ -184,7 +185,7 @@ def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None,
     thresh_convert = thresh * binsz + omin
 
     if Apply:
-        if Invert:
+        if invert:
             mask = (arr < thresh_convert) & (arr >= omin)
         else:
             mask = (arr >= thresh_convert) & (arr <= omax)
@@ -192,7 +193,7 @@ def triangle_threshold(array, Binsize=None, Max=None, Min=None, Nbins=None,
 
     return threshold
 
-def input_output_main(infile, outfile, driver='ENVI', Max=None, Min=None,
+def input_output_main(infile, outfile, driver='ENVI', maxv=None, minv=None,
                       binsize=None, nbins=None, invert=invert):
     """
     A function to handle the input and ouput of image files.  GDAL is used for
@@ -208,19 +209,19 @@ def input_output_main(infile, outfile, driver='ENVI', Max=None, Min=None,
     :param driver:
         A string containing a GDAL compliant image driver. Defaults to ENVI.
 
-    :param Max:
+    :param maxv:
         (Optional) The maximum value to be used in creating the histogram. If
         not specified the array will be searched for max.
 
-    :param Min:
+    :param minv:
         (Optional) The minimum value to be used in creating the histogram.
         If not specified the array will be searched for min.
 
-    :param Binsize:
+    :param binsize:
         (Optional) The binsize (Default is 1) to be used for creating the
         histogram.
 
-    :param Nbins:
+    :param nbins:
         (Optional) The number of bins to be used for creating the histogram. 
         If set binsize is calculated as:
 
@@ -230,7 +231,7 @@ def input_output_main(infile, outfile, driver='ENVI', Max=None, Min=None,
 
         (nbins*binsize + min).
 
-    :param Invert:
+    :param invert:
         If True (Default is False), then the returned mask will be inverted.
         Only valid if Apply=True.
         The inverted mask is applied as:
@@ -248,8 +249,8 @@ def input_output_main(infile, outfile, driver='ENVI', Max=None, Min=None,
     geoT = ds.GetGeoTransform()
 
     # Run the threshold algorithm
-    mask = triangle_threshold(array=img, Binsize=binsize, Max=Max, Min=Min,
-                              Nbins=Nbins, Invert=invert)
+    mask = triangle_threshold(array=img, binsize=binsize, maxv=maxv, minv=minv,
+                              nbins=Nbins, invert=invert)
 
     # Write the file to disk
     image_tools.write_img(shadow_mask, name=outfile, format=driver,
@@ -259,29 +260,55 @@ def input_output_main(infile, outfile, driver='ENVI', Max=None, Min=None,
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser = argparse.ArgumentParser(description='Creates a binary mask from an image using the Triangle threshold method. The threshold is calculated as the point of maximum perpendicular distance of a line between the histogram peak and the farthest non-zero histogram edge to the histogram. The inverted mask is applied as (array < threshold) & (array >= min). The non-inverted mask is applied as (array >= threshold) & (array <= max)')
+    desc = ("Creates a binary mask from an image using the Triangle "
+            "threshold method. The threshold is calculated as the point "
+            "of maximum perpendicular distance of a line between the "
+            "histogram peak and the farthest non-zero histogram edge to the "
+            "histogram. The inverted mask is applied as: "
+            "array < threshold) & (array >= min). "
+            "The non-inverted mask is applied as : "
+            "(array >= threshold) & (array <= max)")
+    parser = argparse.ArgumentParser(description=desc)
 
-    parser.add_argument('--infile', required=True, help='The input image on which to create the mask using the triangel threshold.')
-    parser.add_argument('--outfile', required=True, help='The output filename.')
-    parser.add_argument('--driver', default='ENVI', help="The file driver type for the output file. See GDAL's list of valid file types. (Defaults to ENVI).")
-    parser.add_argument('--min', default=None, help="The minimum value to be used in creating the histogram. If not specified the array will be searched for min.")
-    parser.add_argument('--max', default=None, help="The maxnimum value to be used in creating the histogram. If not specified the array will be searched for max.")
-    parser.add_argument('--binsize', default=None, help="The binsize (Default is 1) to be used for creating the histogram.")
-    parser.add_argument('--nbins', default=None, help="The number of bins to be used for creating the histogram. Will overide the binsize argument.")
-    parser.add_argument('--invert', action="store_true", help="If set then the application of the threshold will be inverted.")
+    parser.add_argument('--infile', required=True,
+                        help=("The input image on which to create the mask "
+                              "using the triangel threshold."))
+    parser.add_argument('--outfile', required=True,
+                        help='The output filename.')
+    parser.add_argument('--driver', default='ENVI',
+                        help=("The file driver type for the output file. "
+                              "See GDAL's list of valid file types. "
+                              "(Defaults to ENVI)."))
+    parser.add_argument('--min', default=None,
+                        help=("The minimum value to be used in creating the "
+                              "histogram. If not specified the array will be "
+                              "searched for min."))
+    parser.add_argument('--max', default=None,
+                        help=("The maxnimum value to be used in creating the "
+                              "histogram. If not specified the array will be "
+                              "searched for max."))
+    parser.add_argument('--binsize', default=None,
+                        help=("The binsize (Default is 1) to be used for "
+                              "creating the histogram."))
+    parser.add_argument('--nbins', default=None,
+                        help=("The number of bins to be used for creating the "
+                              "histogram. Will overide the binsize argument."))
+    parser.add_argument('--invert', action="store_true",
+                        help=("If set then the application of the threshold "
+                              "will be inverted."))
 
     # Retrieve the arguments
     parsed_args = parser.parse_args()
 
-    infile  = parsed_args.infile
+    infile = parsed_args.infile
     outfile = parsed_args.outfile
-    drv     = parsed_args.driver
-    mn_     = parsed_args.min
-    mx_     = parsed_args.max
-    binsz   = parsed_args.binsize
-    nbins   = parsed_args.nbins
-    invert  = parsed_args.invert
+    drv = parsed_args.driver
+    mn_ = parsed_args.min
+    mx_ = parsed_args.max
+    binsz = parsed_args.binsize
+    nbins = parsed_args.nbins
+    invert = parsed_args.invert
 
     # Run main
-    input_output_main(infile, outfile, driver=drv, Max=mx_, Min=mn_,
+    input_output_main(infile, outfile, driver=drv, maxv=mx_, minv=mn_,
                       binsize=binsz, nbins=nbins, invert=invert)

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 
 """
 Copyright (c) 2014, Josh Sixsmith
@@ -27,10 +27,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import numpy
-from IDL_functions import histogram
+from idl_functions import histogram
 
-def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
-                   Fast=True, Apply=False):
+def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
+                   fast=True, Apply=False):
     """
     Calculates the Otsu threshold.
 
@@ -40,7 +40,7 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
     :param image:
         A numpy array of maximum three dimensions.
 
-    :param Fast:
+    :param fast:
         Default is True. Will find the optimal threshold using the fast method
         which approximates the mean value per class.
 
@@ -49,19 +49,19 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
         image will be returned. Otherwise only the threshold/thresholds will be
         returned.
 
-    :param Binsize:
+    :param binsize:
         (Optional) The binsize (Default is 1) to be used for creating the
         histogram.
 
-    :param Max:
+    :param maxv:
         (Optional) The maximum value to be used in creating the histogram. If
         not specified the array will be searched for max.
 
-    :param Min:
+    :param minv:
         (Optional) The minimum value to be used in creating the histogram. If
         not specified the array will be searched for min.
 
-    :param Nbins:
+    :param nbins:
         (Optional) The number of bins to be used for creating the histogram.
         If set binsize is calculated as (max - min) / (nbins - 1), and the max
         value will be adjusted to (nbins*binsize + min).
@@ -71,7 +71,7 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
 
     :history:
         * 06/02/2013--Created
-        * 04/06/2013--Keywords Binsize, Nbins, Min, Max, Fast and Apply added.
+        * 04/06/2013--Keywords binsize, nbins, minv, maxv, fast and Apply added.
 
     :sources:
         http://www.labbookpages.co.uk/software/imgProc/otsuThreshold.html
@@ -90,7 +90,7 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
         print msg
         return None
 
-    if Fast:
+    if fast:
         if (len(dims) == 3):
             # For multi-band images, return a list of thresholds
             thresholds = []
@@ -99,7 +99,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
                 img = image[b].flatten()
 
                 h = histogram(img, locations='loc', omin='omin',
-                              binsize=Binsize, Max=Max, Min=Min, nbins=Nbins)
+                              binsize=binsize, maxv=maxv, minv=minv,
+                              nbins=nbins)
                 hist = h['histogram']
                 omin = h['omin']
                 loc = h['loc']
@@ -115,7 +116,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
                 fground_weights = 1 - bground_weights # reverse probability
                 mean_bground = numpy.zeros(hist.shape[0])
                 mean_fground = numpy.zeros(hist.shape[0])
-                mean_bground[0:-1] = (numpy.cumsum(hist * loc) / cumu_hist)[0:-1]
+                mean_bground[0:-1] = (numpy.cumsum(hist * loc) /
+                                      cumu_hist)[0:-1]
                 mean_fground[0:-1] = ((numpy.cumsum(hist[::-1] * loc[::-1]) /
                                        rcumu_hist)[::-1])[1:]
                 sigma_between = (bground_weights * fground_weights *
@@ -135,8 +137,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
 
         elif (len(dims) == 2):
             img = image.flatten()
-            h = histogram(img, locations='loc', omin='omin', binsize=Binsize,
-                          Max=Max, Min=Min, nbins=Nbins)
+            h = histogram(img, locations='loc', omin='omin', binsize=binsize,
+                          maxv=maxv, minv=minv, nbins=nbins)
             hist = h['histogram']
             omin = h['omin']
             loc = h['loc']
@@ -169,8 +171,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
                 return threshold
 
         elif (len(dims) == 1):
-            h = histogram(image, locations='loc', omin='omin', binsize=Binsize,
-                          Max=Max, Min=Min, nbins=Nbins)
+            h = histogram(image, locations='loc', omin='omin', binsize=binsize,
+                          maxv=maxv, minv=minv, nbins=nbins)
             hist = h['histogram']
             omin = h['omin']
             loc = h['loc']
@@ -212,8 +214,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
             for b in range(bands):
                 img = image[b].flatten()
                 h = histogram(img, reverse_indices='ri', omin='omin',
-                              locations='loc', binsize=Binsize, Max=Max,
-                              Min=Min, nbins=Nbins)
+                              locations='loc', binsize=binsize, maxv=maxv,
+                              minv=minv, nbins=nbins)
 
                 hist = h['histogram']
                 ri = h['ri']
@@ -259,8 +261,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
         elif (len(dims) == 2):
             img = image.flatten()
             h = histogram(img, reverse_indices='ri', omin='omin',
-                          locations='loc', binsize=Binsize, Max=Max, Min=Min,
-                          nbins=Nbins)
+                          locations='loc', binsize=binsize, maxv=maxv,
+                          minv=minv, nbins=nbins)
 
             hist = h['histogram']
             ri = h['ri']
@@ -301,8 +303,8 @@ def otsu_threshold(image, Binsize=None, Max=None, Min=None, Nbins=None,
 
         elif (len(dims) == 1):
             h = histogram(image, reverse_indices='ri', omin='omin',
-                          locations='loc', binsize=Binsize, Max=Max, Min=Min,
-                          nbins=Nbins)
+                          locations='loc', binsize=binsize, maxv=maxv,
+                          minv=minv, nbins=nbins)
 
             hist = h['histogram']
             ri = h['ri']
