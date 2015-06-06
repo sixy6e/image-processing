@@ -27,11 +27,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import numpy
-from IDL_functions import histogram
-from IDL_functions import array_indices
+from idl_functions import histogram
+from idl_functions import array_indices
 
 
 class SegmentVisitor:
+
     """
     Given a segmented array, SegmentKeeper will find the segments and optionally
     calculate basic statistics. A value of zero is considered to be the background
@@ -54,6 +55,7 @@ class SegmentVisitor:
         >>> seg_ds.get_segment_data(vals, segment_id=2)
         >>> seg_ds.get_segment_locations(segment_id=3)
     """
+
     def __init__(self, array):
         """
         Initialises the SegmentVisitor class.
@@ -88,7 +90,7 @@ class SegmentVisitor:
         within a 2D array. The minimum and maximum segemnt ID's/labels are
         also determined.
         """
-        h = histogram(self.array_1D, Min=0, reverse_indices='ri')
+        h = histogram(self.array_1D, minv=0, reverse_indices='ri')
 
         self.histogram = h['histogram']
         self.ri = h['ri']
@@ -599,7 +601,7 @@ class SegmentVisitor:
             array = self.array.flatten()
 
         # Calculate the histogram to find potential non-consecutive segments
-        h = histogram(array, Min=0, reverse_indices='ri')
+        h = histogram(array, minv=0, reverse_indices='ri')
 
         hist = h['histogram']
         ri = h['ri']
@@ -619,7 +621,7 @@ class SegmentVisitor:
             return array
 
 
-    def sieve_segments(self, value, Min=True, inplace=True):
+    def sieve_segments(self, value, minf=True, inplace=True):
         """
         Sieves segments by filtering based on a minimum or maximum
         area criterion. If filtering by minimum (default) then segments
@@ -629,7 +631,7 @@ class SegmentVisitor:
         :param value:
             Area criterion from which to filter by.
 
-        :param Min:
+        :param minf:
             A boolean indicating the filtering type. Default is to
             filter by minimum criterion (Min=True).
 
@@ -655,7 +657,7 @@ class SegmentVisitor:
         ri = self.ri
 
         # Filter
-        if Min:
+        if minf:
             wh = numpy.where(hist < value)[0]
         else:
             wh = numpy.where(hist > value)[0]
