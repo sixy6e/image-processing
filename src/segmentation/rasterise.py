@@ -35,8 +35,8 @@ from eotools.coordinates import convert_coordinates
 
 
 def create_memory_dataset(samples, lines, name='MemoryDataset', bands=1,
-                        projection=None, geotransform=None,
-                        dtype=gdal.GDT_UInt32):
+                          projection=None, geotransform=None,
+                          dtype=gdal.GDT_UInt32):
     """
     Creates a GDAL dataset contained entirely in memory (format type = "MEM").
 
@@ -56,8 +56,9 @@ def create_memory_dataset(samples, lines, name='MemoryDataset', bands=1,
         A WKT string containing the projection used by the dataset.
 
     :param geotransform:
-        A tuple containing the geotransform used by the dataset.  The tuple is
-        if the form ().
+        A tuple containing the geotransform used by the dataset.
+        The tuple should contain 6 elements and conform to the GDAL
+        datamodel.
 
     :param dtype:
         An integer representing the GDAL datatype. Default datatype is UInt32
