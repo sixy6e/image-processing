@@ -616,9 +616,9 @@ class SegmentVisitor:
 
         if inplace:
             # Reinitialise the segment class
-            self.__init__(array)
+            self.__init__(array.reshape(self.array.shape))
         else:
-            return array
+            return array.reshape(self.array.shape)
 
 
     def sieve_segments(self, value, minf=True, inplace=True):
@@ -670,10 +670,10 @@ class SegmentVisitor:
 
         if inplace:
             # Reinitialise the segment class and reset the segment id's
-            self.__init__(array)
+            self.__init__(array.reshape(self.array.shape))
             self.reset_segment_ids()
         else:
-            return array
+            return array.reshape(self.array.shape)
 
 
     def segment_bounding_box(self, segment_ids=None):
