@@ -90,7 +90,7 @@ def calculate_triangle_threshold(histogram):
     y2 = m * x1 + b
 
     # Distances for each point along the line to the histogram
-    dists = numpy.sqrt((y2 - y1)^2)
+    dists = numpy.sqrt((y2 - y1)**2)
 
     # Get the location of the maximum distance
     thresh_loc = numpy.argmax(dists)
