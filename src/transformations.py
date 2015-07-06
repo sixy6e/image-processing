@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from IDL_functions import histogram
+from idl_functions import histogram
 
 def histogram_backprojection(array, roi, nbins=256):
     """
@@ -26,3 +26,5 @@ def histogram_backprojection(array, roi, nbins=256):
 
     # Produce the probability image
     # i.e. index into the pdf via the bin location for every pixel
+
+    return None
