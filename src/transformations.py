@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
+import numpy
 from idl_functions import histogram
+
 
 def histogram_backprojection(array, roi, nbins=256):
     """
@@ -26,5 +28,17 @@ def histogram_backprojection(array, roi, nbins=256):
 
     # Produce the probability image
     # i.e. index into the pdf via the bin location for every pixel
+    result = numpy.zeros(array.shape, dtype='float32').ravel()
+    h_arr = histogram(array, nbins=nbins, minv=omin, maxv=omax,
+                      reverse_indices='ri')
+    hist_arr = h_arr['histogram']
+    total_hist_arr = numpy.sum(hist_arr, dtype='float')
+    norm_hist_arr = hist_arr / total_hist_arr
+    ri = h_arr['ri']
 
-    return None
+    for i in range(norm_hist_arr.shape[0]):
+        if norm_hist_arr[i] == 0:
+            continue
+        result[ri[ri[i]:ri[i+1]]] = norm_h[i] / norm_hist_arr[i]
+
+    return result.reshape(array.shape)
