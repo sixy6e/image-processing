@@ -250,8 +250,13 @@ class SegmentVisitor(object):
                 total_seg[i] = total
 
         if dataframe:
-            df = pandas.DataFrame(columns='Total', index=total_seg.keys())
+            cols = ['Segment_IDs', 'Total']
+            df = pandas.DataFrame(columns=cols, index=total_seg.keys())
             df['Total'] = pandas.DataFrame.from_dict(total_seg, orient='index')
+
+            # Set the segment ids column and reset the index
+            df['Segment_IDs'] = df.index
+            df.reset_index(drop=True, inplace=True)
             return df
         else:
             return total_seg
@@ -295,7 +300,7 @@ class SegmentVisitor(object):
                 raise TypeError(msg)
 
             # Get a unique listing of the segment_ids
-            s = self.segment_ids
+            s = numpy.unique(numpy.array(segment_ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
@@ -311,7 +316,7 @@ class SegmentVisitor(object):
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = numpy.arange(1, hist.shape[0])
+            s = self.segment_ids
 
         # Initialise a dictionary to hold the mean value per segment
         mean_seg = {}
@@ -332,8 +337,13 @@ class SegmentVisitor(object):
                 mean_seg[i] = xbar
 
         if dataframe:
-            df = pandas.DataFrame(columns='Mean', index=mean_seg.keys())
+            cols = ['Segment_IDs', 'Mean']
+            df = pandas.DataFrame(columns=cols, index=mean_seg.keys())
             df['Mean'] = pandas.DataFrame.from_dict(mean_seg, orient='index')
+
+            # Set the segment ids column and reset the index
+            df['Segment_IDs'] = df.index
+            df.reset_index(drop=True, inplace=True)
             return df
         else:
             return mean_seg
@@ -413,8 +423,13 @@ class SegmentVisitor(object):
                 max_seg[i] = mx_
 
         if dataframe:
-            df = pandas.DataFrame(columns='Max', index=max_seg.keys())
+            cols = ['Segment_IDs', 'Max']
+            df = pandas.DataFrame(columns=cols, index=max_seg.keys())
             df['Max'] = pandas.DataFrame.from_dict(max_seg, orient='index')
+
+            # Set the segment ids column and reset the index
+            df['Segment_IDs'] = df.index
+            df.reset_index(drop=True, inplace=True)
             return df
         else:
             return max_seg
@@ -494,8 +509,13 @@ class SegmentVisitor(object):
                 min_seg[i] = mn_
 
         if dataframe:
-            df = pandas.DataFrame(columns='Min', index=min_seg.keys())
+            cols = ['Segment_IDs', 'Min']
+            df = pandas.DataFrame(columns=cols, index=min_seg.keys())
             df['Min'] = pandas.DataFrame.from_dict(min_seg, orient='index')
+
+            # Set the segment ids column and reset the index
+            df['Segment_IDs'] = df.index
+            df.reset_index(drop=True, inplace=True)
             return df
         else:
             return min_seg
@@ -582,9 +602,14 @@ class SegmentVisitor(object):
                 stddev_seg[i] = stddev
 
         if dataframe:
-            df = pandas.DataFrame(columns='StdDev', index=stddev_seg.keys())
+            cols = ['Segment_IDs', 'StdDev']
+            df = pandas.DataFrame(columns=cols, index=stddev_seg.keys())
             df['StdDev'] = pandas.DataFrame.from_dict(stddev_seg,
                                                       orient='index')
+
+            # Set the segment ids column and reset the index
+            df['Segment_IDs'] = df.index
+            df.reset_index(drop=True, inplace=True)
             return df
         else:
             return stddev_seg
@@ -647,8 +672,13 @@ class SegmentVisitor(object):
             area_seg[i] = hist[i] * scale_factor
 
         if dataframe:
-            df = pandas.DataFrame(columns='Area', index=area_seg.keys())
+            cols = ['Segment_IDs', 'Area']
+            df = pandas.DataFrame(columns=cols, index=area_seg.keys())
             df['Area'] = pandas.DataFrame.from_dict(area_seg, orient='index')
+
+            # Set the segment ids column and reset the index
+            df['Segment_IDs'] = df.index
+            df.reset_index(drop=True, inplace=True)
             return df
         else:
             return area_seg
@@ -811,8 +841,8 @@ class SegmentVisitor(object):
         return yx_start_end_seg
 
 
-    def basic_statistics(self, array, segment_ids=None, ddof=1,
-                         scale_factor=1.0, nan=False):
+    def segment_basic_statistics(self, array, segment_ids=None, ddof=1,
+                                 scale_factor=1.0, nan=False):
         """
         Calculates the basic statistics per segment given an
         array containing data. Statistical measures calculated are:
@@ -905,11 +935,15 @@ class SegmentVisitor(object):
             stats['Area'][i] = hist[i] * scale_factor
 
         # Define the output dataframe
-        cols = ['Mean', 'Max', 'Min', 'StdDev', 'Total', 'Area']
+        cols = ['Segment_IDs', 'Mean', 'Max', 'Min', 'StdDev', 'Total', 'Area']
         df = pandas.DataFrame(columns=cols, index=stats['Mean'].keys())
 
-        # Insert our stats results
+        # Insert the stats results
         for key in stats:
             df[key] = pandas.DataFrame.from_dict(stats[key], orient='index')
+
+        # Set the segment ids column and reset the index
+        df['Segment_IDs'] = df.index
+        df.reset_index(drop=True, inplace=True)
 
         return df
