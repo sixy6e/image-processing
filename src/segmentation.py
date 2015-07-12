@@ -27,16 +27,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import numpy
+import pandas
 from idl_functions import histogram
 from idl_functions import array_indices
 
 
-class SegmentVisitor:
+class SegmentVisitor(object):
 
     """
-    Given a segmented array, SegmentKeeper will find the segments and optionally
-    calculate basic statistics. A value of zero is considered to be the background
-    and ignored.
+    Given a segmented array, SegmentKeeper will find the segments and
+    optionally calculate basic statistics. A value of zero is considered
+    to be the background and ignored.
 
     Designed as an easier interface for analysing segmented regions.
 
@@ -174,7 +175,8 @@ class SegmentVisitor:
         return idx
 
 
-    def segment_total(self, array, segment_ids=None, nan=False):
+    def segment_total(self, array, segment_ids=None, nan=False,
+                      dataframe=False):
         """
         Calculates the total value per segment given a 2D array containing
         data.
@@ -191,9 +193,16 @@ class SegmentVisitor:
             A boolean indicating whether we check for occurences of NaN
             during the total calculation. Default is False.
 
+        :param dataframe:
+            A boolean indicating the return type. If set to True, then
+            a `pandas.DataFrame` structure will be returned. Default is
+            to return a dictionary with the `segment ids's` as the keys.
+
         :return:
-            A dictionary where each key corresponds to a segment ID, and
-            each value is the total value for that segment ID.
+            If `dataframe` is set to `True`, then a `pandas.DataFrame`
+            will be returned. Otherwise a dictionary where each key
+            corresponds to a segment ID, and each value is the total
+            value for that segment ID.
         """
         arr_flat = array.ravel()
         hist = self.histogram
@@ -240,10 +249,16 @@ class SegmentVisitor:
                 total = numpy.sum(arr_flat[ri[ri[i]:ri[i+1]]])
                 total_seg[i] = total
 
-        return total_seg
+        if dataframe:
+            df = pandas.DataFrame(columns='Total', index=total_seg.keys())
+            df['Total'] = pandas.DataFrame.from_dict(total_seg, orient='index')
+            return df
+        else:
+            return total_seg
 
 
-    def segment_mean(self, array, segment_ids=None, nan=False):
+    def segment_mean(self, array, segment_ids=None, nan=False,
+                     dataframe=False):
         """
         Calculates the mean value per segment given a 2D array containing data.
 
@@ -259,9 +274,16 @@ class SegmentVisitor:
             A boolean indicating whether we check for occurences of NaN
             during the mean calculation. Default is False.
 
+        :param dataframe:
+            A boolean indicating the return type. If set to True, then
+            a `pandas.DataFrame` structure will be returned. Default is
+            to return a dictionary with the `segment ids's` as the keys.
+
         :return:
-            A dictionary where each key corresponds to a segment ID, and
-            each value is the mean value for that segment ID.
+            If `dataframe` is set to `True`, then a `pandas.DataFrame`
+            will be returned. Otherwise a dictionary where each key
+            corresponds to a segment ID, and each value is the mean
+            value for that segment ID.
         """
         arr_flat = array.ravel()
         hist = self.histogram
@@ -309,10 +331,15 @@ class SegmentVisitor:
                 xbar = numpy.mean(arr_flat[ri[ri[i]:ri[i+1]]])
                 mean_seg[i] = xbar
 
-        return mean_seg
+        if dataframe:
+            df = pandas.DataFrame(columns='Mean', index=mean_seg.keys())
+            df['Mean'] = pandas.DataFrame.from_dict(mean_seg, orient='index')
+            return df
+        else:
+            return mean_seg
 
 
-    def segment_max(self, array, segment_ids=None, nan=False):
+    def segment_max(self, array, segment_ids=None, nan=False, dataframe=False):
         """
         Calculates the max value per segment given an array containing data.
 
@@ -328,9 +355,16 @@ class SegmentVisitor:
             A boolean indicating whether we check for occurences of NaN
             during the max calculation. Default is False.
 
+        :param dataframe:
+            A boolean indicating the return type. If set to True, then
+            a `pandas.DataFrame` structure will be returned. Default is
+            to return a dictionary with the `segment ids's` as the keys.
+
         :return:
-            A dictionary where each key corresponds to a segment ID, and
-            each value is the maximum value for that segment ID.
+            If `dataframe` is set to `True`, then a `pandas.DataFrame`
+            will be returned. Otherwise a dictionary where each key
+            corresponds to a segment ID, and each value is the maximum
+            value for that segment ID.
         """
         arr_flat = array.ravel()
         hist = self.histogram
@@ -378,10 +412,15 @@ class SegmentVisitor:
                 mx_ = numpy.max(arr_flat[ri[ri[i]:ri[i+1]]])
                 max_seg[i] = mx_
 
-        return max_seg
+        if dataframe:
+            df = pandas.DataFrame(columns='Max', index=max_seg.keys())
+            df['Max'] = pandas.DataFrame.from_dict(max_seg, orient='index')
+            return df
+        else:
+            return max_seg
 
 
-    def segment_min(self, array, segment_ids=None, nan=False):
+    def segment_min(self, array, segment_ids=None, nan=False, dataframe=False):
         """
         Calculates the min value per segment given an array containing data.
 
@@ -397,9 +436,16 @@ class SegmentVisitor:
             A boolean indicating whether we check for occurences of NaN
             during the min calculation. Default is False.
 
+        :param dataframe:
+            A boolean indicating the return type. If set to True, then
+            a `pandas.DataFrame` structure will be returned. Default is
+            to return a dictionary with the `segment ids's` as the keys.
+
         :return:
-            A dictionary where each key corresponds to a segment ID, and
-            each value is the minimum value for that segment ID.
+            If `dataframe` is set to `True`, then a `pandas.DataFrame`
+            will be returned. Otherwise a dictionary where each key
+            corresponds to a segment ID, and each value is the minimum
+            value for that segment ID.
         """
         arr_flat = array.ravel()
         hist = self.histogram
@@ -447,10 +493,16 @@ class SegmentVisitor:
                 mn_ = numpy.min(arr_flat[ri[ri[i]:ri[i+1]]])
                 min_seg[i] = mn_
 
-        return min_seg
+        if dataframe:
+            df = pandas.DataFrame(columns='Min', index=min_seg.keys())
+            df['Min'] = pandas.DataFrame.from_dict(min_seg, orient='index')
+            return df
+        else:
+            return min_seg
 
 
-    def segment_stddev(self, array, segment_ids=None, ddof=1, nan=False):
+    def segment_stddev(self, array, segment_ids=None, ddof=1, nan=False,
+                       dataframe=False):
         """
         Calculates the standard deviation per segment given an
         array containing data. By default the sample standard deviation is
@@ -472,9 +524,16 @@ class SegmentVisitor:
             A boolean indicating whether we check for occurences of NaN
             during the standard deviation calculation. Default is False.
 
+        :param dataframe:
+            A boolean indicating the return type. If set to True, then
+            a `pandas.DataFrame` structure will be returned. Default is
+            to return a dictionary with the `segment ids's` as the keys.
+
         :return:
-            A dictionary where each key corresponds to a segment ID, and
-            each value is the standard deviation for that segment ID.
+            If `dataframe` is set to `True`, then a `pandas.DataFrame`
+            will be returned. Otherwise a dictionary where each key
+            corresponds to a segment ID, and each value is the
+            standard deviation for that segment ID.
         """
         arr_flat = array.ravel()
         hist = self.histogram
@@ -522,10 +581,17 @@ class SegmentVisitor:
                 stddev = numpy.std(arr_flat[ri[ri[i]:ri[i+1]]], ddof=ddof)
                 stddev_seg[i] = stddev
 
-        return stddev_seg
+        if dataframe:
+            df = pandas.DataFrame(columns='StdDev', index=stddev_seg.keys())
+            df['StdDev'] = pandas.DataFrame.from_dict(stddev_seg,
+                                                      orient='index')
+            return df
+        else:
+            return stddev_seg
 
 
-    def segment_area(self, segment_ids=None, scale_factor=1.0):
+    def segment_area(self, segment_ids=None, scale_factor=1.0,
+                     dataframe=False):
         """
         Returns the area for a given segment ID.
 
@@ -537,9 +603,16 @@ class SegmentVisitor:
             A value representing a scale factor for quantifying a pixels unit
             area. Default is 1.0.
 
+        :param dataframe:
+            A boolean indicating the return type. If set to True, then
+            a `pandas.DataFrame` structure will be returned. Default is
+            to return a dictionary with the `segment ids's` as the keys.
+
         :return:
-            A dictionary where each key corresponds to a segment ID, and
-            each value is the area for that segment ID.
+            If `dataframe` is set to `True`, then a `pandas.DataFrame`
+            will be returned. Otherwise a dictionary where each key
+            corresponds to a segment ID, and each value is the area
+            for that segment ID.
         """
         hist = self.histogram
 
@@ -573,7 +646,12 @@ class SegmentVisitor:
         for i in s:
             area_seg[i] = hist[i] * scale_factor
 
-        return area_seg
+        if dataframe:
+            df = pandas.DataFrame(columns='Area', index=area_seg.keys())
+            df['Area'] = pandas.DataFrame.from_dict(area_seg, orient='index')
+            return df
+        else:
+            return area_seg
 
 
     def reset_segment_ids(self, inplace=True):
@@ -645,7 +723,7 @@ class SegmentVisitor:
             be returned.
             If inplace=True, then the filtering will be performed
             inplace. Before returning, the SegmentVisitor class is
-            re-intiialised and the reset_segment_ids is run.  No array
+            re-intialised and the reset_segment_ids is run.  No array
             is returned.
         """
         if inplace:
@@ -716,7 +794,7 @@ class SegmentVisitor:
             # Create an index to loop over every segment
             s = self.segment_ids
 
-        # Initialise a dictionary to hold the boudng box per segment
+        # Initialise a dictionary to hold the bounding box per segment
         yx_start_end_seg = {}
 
         # Find the minimum bounding box per segment
@@ -731,3 +809,107 @@ class SegmentVisitor:
             yx_start_end_seg[i] = yx_start_end
 
         return yx_start_end_seg
+
+
+    def basic_statistics(self, array, segment_ids=None, ddof=1,
+                         scale_factor=1.0, nan=False):
+        """
+        Calculates the basic statistics per segment given an
+        array containing data. Statistical measures calculated are:
+
+            * Mean
+            * Max
+            * Min
+            * Standard Deviation
+            * Total
+            * Area
+
+        :param array:
+            A 2D NumPy array containing the data to be extracted given
+            a segment_id.
+
+        :param segment_ids:
+            A list of integers corresponding to the segment_ids of interest.
+            Default is to calculate the standard deviation for every segment.
+
+        :param ddof:
+            Delta degrees of freedom. Default is 1 which calculates the sample
+            standard deviation.
+
+        :param scale_factor:
+            A value representing a scale factor for quantifying a pixels unit
+            area. Default is 1.0.
+
+        :param nan:
+            A boolean indicating whether we check for occurences of NaN
+            during the standard deviation calculation. Default is False.
+
+        :return:
+            A `pandas.DataFrame` with each column containing a single
+            statistical measure for all segments.
+        """
+        arr_flat = array.ravel()
+        hist = self.histogram
+        ri = self.ri
+
+        if segment_ids:
+            if not isinstance(segment_ids, list):
+                msg = "segment_ids must be of type list!"
+                raise TypeError(msg)
+
+            # Get a unique listing of the segment_ids
+            s = numpy.unique(numpy.array(segment_ids))
+
+            # Evaluate the min and max to determine if we are outside the valid
+            # segment range
+            min_id = numpy.min(s)
+            max_id = numpy.max(s)
+            if not (min_id >= self.min_seg_id):
+                msg = "The minimum segment ID in the dataset is {}"
+                msg = msg.format(self.min_seg_id)
+                raise Exception(msg)
+            if not (max_id <= self.max_seg_id):
+                msg = "The maximum segment ID in the dataset is {}"
+                msg = msg.format(self.max_seg_id)
+                raise Exception(msg)
+        else:
+            s = self.segment_ids
+
+        # Define the nan/non-nan function mapping
+        mean_ = {True: numpy.nanmean, False: numpy.mean}
+        max_ = {True: numpy.nanmax, False: numpy.max}
+        min_ = {True: numpy.nanmin, False: numpy.min}
+        stddev_ = {True: numpy.nanstd, False: numpy.std}
+        total_ = {True: numpy.nansum, False: numpy.sum}
+
+        # Initialise a dictionary to hold the stats per segment
+        stats = {}
+        stats['Mean'] = {}
+        stats['Max'] = {}
+        stats['Min'] = {}
+        stats['StdDev'] = {}
+        stats['Total'] = {}
+        stats['Area'] = {}
+
+        # Find the stats per segment
+        for i in s:
+            if (hist[i] == 0):
+                continue
+            idx = ri[ri[i]:ri[i+1]]
+            data = arr_flat[idx]
+            stats['Mean'][i] = mean_[nan](data)
+            stats['Max'][i] = max_[nan](data)
+            stats['Min'][i] = min_[nan](data)
+            stats['StdDev'][i] = stddev_[nan](data, ddof=ddof)
+            stats['Total'][i] = total_[nan](data)
+            stats['Area'][i] = hist[i] * scale_factor
+
+        # Define the output dataframe
+        cols = ['Mean', 'Max', 'Min', 'StdDev', 'Total', 'Area']
+        df = pandas.DataFrame(columns=cols, index=stats['Mean'].keys())
+
+        # Insert our stats results
+        for key in stats:
+            df[key] = pandas.DataFrame.from_dict(stats[key], orient='index')
+
+        return df
