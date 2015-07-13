@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='image_processing',
-      version='0.3',
+      version='0.4',
       package_dir={'image_processing' : 'src'},
       packages=['image_processing'],
       author='Josh Sixsmith',
