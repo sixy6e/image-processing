@@ -30,7 +30,7 @@ import numpy
 from idl_functions import histogram
 
 def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
-                   fast=True, Apply=False):
+                   fast=True, apply_threshold=False):
     """
     Calculates the Otsu threshold.
 
@@ -44,7 +44,7 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
         Default is True. Will find the optimal threshold using the fast method
         which approximates the mean value per class.
 
-    :param Apply:
+    :param apply_threshold:
         Default is False. If True then a mask/masks of the same dimensions as
         image will be returned. Otherwise only the threshold/thresholds will be
         returned.
@@ -65,7 +65,7 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
         (Optional) The number of bins to be used for creating the histogram.
         If set binsize is calculated as (max - min) / (nbins - 1), and the max
         value will be adjusted to (nbins*binsize + min).
-          
+
     :author:
         Josh Sixsmith, joshua.sixsmith@gmail.com
 
@@ -96,7 +96,7 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
             thresholds = []
             bands = dims[0]
             for b in range(bands):
-                img = image[b].flatten()
+                img = image[b]
 
                 h = histogram(img, locations='loc', omin='omin',
                               binsize=binsize, maxv=maxv, minv=minv,
@@ -127,7 +127,7 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
 
                 thresholds.append(thresh)
 
-            if Apply:
+            if apply_threshold:
                 masks = numpy.zeros(dims, dtype='bool')
                 for b in range(bands):
                     masks[b] = image[b] > thresholds[b]
@@ -136,19 +136,18 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
                 return thresholds
 
         elif (len(dims) == 2):
-            img = image.flatten()
-            h = histogram(img, locations='loc', omin='omin', binsize=binsize,
+            h = histogram(image, locations='loc', omin='omin', binsize=binsize,
                           maxv=maxv, minv=minv, nbins=nbins)
             hist = h['histogram']
             omin = h['omin']
             loc = h['loc']
             binsz = numpy.abs(loc[1] - loc[0])
- 
+
             cumu_hist = numpy.cumsum(hist, dtype=float)
             rcumu_hist = numpy.cumsum(hist[::-1], dtype=float) # reverse
- 
+
             total = cumu_hist[-1]
- 
+
             # probabilities per threshold class
             bground_weights = cumu_hist / total
             fground_weights = 1 - bground_weights # reverse probability
@@ -161,10 +160,10 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
                             (mean_bground - mean_fground)**2)
             thresh = numpy.argmax(sigma_between)
             thresh = (thresh * binsz) + omin
- 
+
             threshold = thresh
 
-            if Apply:
+            if apply_threshold:
                 mask = image > threshold
                 return mask
             else:
@@ -200,7 +199,7 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
 
             threshold = thresh
 
-            if Apply:
+            if apply_threshold:
                 mask = image > threshold
                 return mask
             else:
@@ -212,7 +211,7 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
             thresholds = []
             bands = dims[0]
             for b in range(bands):
-                img = image[b].flatten()
+                img = image[b].ravel()
                 h = histogram(img, reverse_indices='ri', omin='omin',
                               locations='loc', binsize=binsize, maxv=maxv,
                               minv=minv, nbins=nbins)
@@ -228,13 +227,13 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
                 nB = numpy.cumsum(hist, dtype='int64')
                 total = nB[-1]
                 nF = total - nB
-        
+
                 # should't be a problem to start at zero. best_sigma should
                 # (by design) always be positive
                 best_sigma = 0
                 # set to loc[0], thresholds can be negative
                 optimal_t = loc[0]
-        
+
                 for i in range(nbins):
                     # get bin zero to the threshold 'i', then 'i' to nbins
                     if ((ri[i+1] > ri[0]) and (ri[nbins] > ri[i+1])):
@@ -246,10 +245,10 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
                         if (sigma_btwn > best_sigma):
                             best_sigma = sigma_btwn
                             optimal_t = loc[i]
-                        
+
                 thresholds.append(optimal_t)
 
-            if Apply:
+            if apply_threshold:
                 masks = numpy.zeros(dims, dtype='bool')
                 for b in range(bands):
                     masks[b] = image[b] > thresholds[b]
@@ -257,9 +256,8 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
             else:
                 return thresholds
 
-            
         elif (len(dims) == 2):
-            img = image.flatten()
+            img = image.ravel()
             h = histogram(img, reverse_indices='ri', omin='omin',
                           locations='loc', binsize=binsize, maxv=maxv,
                           minv=minv, nbins=nbins)
@@ -275,13 +273,13 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
             nB = numpy.cumsum(hist, dtype='int64')
             total = nB[-1]
             nF = total - nB
-        
+
             # should't be a problem to start at zero. best_sigma should
             # (by design) always be positive
             best_sigma = 0
             # set to loc[0], thresholds can be negative
             optimal_t = loc[0]
-        
+
             for i in range(nbins):
                 # get bin zero to the threshold 'i', then 'i' to nbins
                 if ((ri[i+1] > ri[0]) and (ri[nbins] > ri[i+1])):
@@ -293,9 +291,9 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
                     if (sigma_btwn > best_sigma):
                         best_sigma = sigma_btwn
                         optimal_t = loc[i]
-                        
+
             threshold = optimal_t
-            if Apply:
+            if apply_threshold:
                 mask = image > threshold
                 return mask
             else:
@@ -337,7 +335,7 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
                         optimal_t = loc[i]
 
             threshold = optimal_t
-            if Apply:
+            if apply_threshold:
                 mask = image > threshold
                 return mask
             else:
@@ -417,9 +415,9 @@ def calculate_triangle_threshold(histogram):
 
 
 def triangle_threshold(array, binsize=None, maxv=None, minv=None, nbins=None,
-                       Apply=True, invert=False):
+                       apply_threshold=True, invert=False):
     """
-    Calculates a threshold and optionally creates a binary mask from an array 
+    Calculates a threshold and optionally creates a binary mask from an array
     using the Triangle threshold method.
 
     The threshold is calculated as the point of maximum perpendicular distance
@@ -429,7 +427,7 @@ def triangle_threshold(array, binsize=None, maxv=None, minv=None, nbins=None,
     :param image:
         A numpy array.
 
-    :param Apply:
+    :param apply_threshold:
         Default is False. If True then a mask of the same dimensions as array
         will be returned. Otherwise only the threshold will be returned.
 
@@ -446,7 +444,7 @@ def triangle_threshold(array, binsize=None, maxv=None, minv=None, nbins=None,
         not specified the array will be searched for min.
 
     :param nbins:
-        (Optional) The number of bins to be used for creating the histogram. 
+        (Optional) The number of bins to be used for creating the histogram.
         If set binsize is calculated as (max - min) / (nbins - 1), and the max
         value will be adjusted to (nbins*binsize + min).
 
@@ -483,8 +481,7 @@ def triangle_threshold(array, binsize=None, maxv=None, minv=None, nbins=None,
 
     dims = array.shape
 
-    arr = array.flatten()
-    h = histogram(arr, locations='loc', omax='omax', omin='omin',
+    h = histogram(array, locations='loc', omax='omax', omin='omin',
                   binsize=binsize, maxv=maxv, minv=minv, nbins=nbins)
 
     hist = h['histogram']
@@ -497,11 +494,11 @@ def triangle_threshold(array, binsize=None, maxv=None, minv=None, nbins=None,
     threshold = calculate_triangle_threshold(histogram=hist)
     thresh_convert = threshold * binsz + omin
 
-    if Apply:
+    if apply_threshold:
         if invert:
-            mask = (arr < thresh_convert) & (arr >= omin)
+            mask = (array < thresh_convert) & (array >= omin)
         else:
-            mask = (arr >= thresh_convert) & (arr <= omax)
+            mask = (array >= thresh_convert) & (array <= omax)
         return mask
 
     return threshold
