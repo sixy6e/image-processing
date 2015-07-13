@@ -122,7 +122,7 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
                                        rcumu_hist)[::-1])[1:]
                 sigma_between = (bground_weights * fground_weights *
                                 (mean_bground - mean_fground)**2)
-                thresh = numpy.argmax(sigma_between)
+                thresh = numpy.nanargmax(sigma_between)
                 thresh = (thresh * binsz) + omin
 
                 thresholds.append(thresh)
@@ -158,7 +158,7 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
                                    rcumu_hist)[::-1])[1:]
             sigma_between = (bground_weights * fground_weights *
                             (mean_bground - mean_fground)**2)
-            thresh = numpy.argmax(sigma_between)
+            thresh = numpy.nanargmax(sigma_between)
             thresh = (thresh * binsz) + omin
 
             threshold = thresh
@@ -194,7 +194,7 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
                                    rcumu_hist)[::-1])[1:]
             sigma_between = (bground_weights * fground_weights *
                             (mean_bground - mean_fground)**2)
-            thresh = numpy.argmax(sigma_between)
+            thresh = numpy.nanargmax(sigma_between)
             thresh = (thresh * binsz) + omin
 
             threshold = thresh
@@ -358,7 +358,7 @@ def calculate_triangle_threshold(histogram):
         starting bin location.
     """
     mx_loc = numpy.argmax(histogram)
-    mx = histogram[mx_loc]
+    mx = float(histogram[mx_loc])
 
     # Find the first and last non-zero elements
     wh = numpy.where(histogram != 0)
@@ -385,7 +385,7 @@ def calculate_triangle_threshold(histogram):
     y_dist = histogram[non_zero_point] - mx
 
     # Gradient
-    m = float(y_dist) / x_dist
+    m = y_dist / x_dist
 
     # Intercept
     b = m * (-mx_loc) + mx
@@ -415,7 +415,7 @@ def calculate_triangle_threshold(histogram):
 
 
 def triangle_threshold(array, binsize=None, maxv=None, minv=None, nbins=None,
-                       apply_threshold=True, invert=False):
+                       apply_threshold=False, invert=False):
     """
     Calculates a threshold and optionally creates a binary mask from an array
     using the Triangle threshold method.
@@ -501,4 +501,4 @@ def triangle_threshold(array, binsize=None, maxv=None, minv=None, nbins=None,
             mask = (array >= thresh_convert) & (array <= omax)
         return mask
 
-    return threshold
+    return thresh_convert
