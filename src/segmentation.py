@@ -26,16 +26,23 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+import fiona
+from fiona.transform import transform_geom
 import numpy
 import pandas
+import rasterio
+from rasterio.crs import is_same_crs
+from rasterio.features import rasterize
+import rtree
+from shapely.geometry import shape as shp
 from idl_functions import histogram
 from idl_functions import array_indices
 
 
-class SegmentVisitor(object):
+class Segments(object):
 
     """
-    Given a segmented array, SegmentKeeper will find the segments and
+    Given a segmented array, the Segments class will find the segments and
     optionally calculate basic statistics. A value of zero is considered
     to be the background and ignored.
 
@@ -48,18 +55,18 @@ class SegmentVisitor(object):
         >>> seg_array[0:3,7:10] = 2
         >>> seg_array[7:10,0:3] = 3
         >>> seg_array[7:10,7:10] = 4
-        >>> seg_ds = SegmentVisitor(seg_array)
+        >>> seg_ds = Segments(seg_array)
         >>> vals = numpy.arange(100).reshape((10,10))
-        >>> seg_ds.segment_mean(vals)
-        >>> seg_ds.segment_max(vals)
-        >>> seg_ds.segment_min(vals)
-        >>> seg_ds.get_segment_data(vals, segment_id=2)
-        >>> seg_ds.get_segment_locations(segment_id=3)
+        >>> seg_ds.mean(vals)
+        >>> seg_ds.max(vals)
+        >>> seg_ds.min(vals)
+        >>> seg_ds.data(vals, segment_id=2)
+        >>> seg_ds.locations(segment_id=3)
     """
 
     def __init__(self, array):
         """
-        Initialises the SegmentVisitor class.
+        Initialises the Segments class.
 
         :param array:
             A 2D NumPy array containing the segmented array.
@@ -77,10 +84,10 @@ class SegmentVisitor(object):
         self.histogram = None
         self.ri = None
 
-        self.min_seg_id = None
-        self.max_seg_id = None
+        self.min_id = None
+        self.max_id = None
         self.n_segments = None
-        self.segment_ids = None
+        self.ids = None
 
         self._find_segments()
 
@@ -103,15 +110,15 @@ class SegmentVisitor(object):
         else:
             mn = mx
 
-        self.min_seg_id = mn
-        self.max_seg_id = mx
+        self.min_id = mn
+        self.max_id = mx
 
         # Determine the segment ids and the number of segments
-        self.segment_ids = numpy.where(self.histogram > 0)[0][1:]
-        self.n_segments = self.segment_ids.shape[0]
+        self.ids = numpy.where(self.histogram > 0)[0][1:]
+        self.n_segments = self.ids.shape[0]
 
 
-    def get_segment_data(self, array, segment_id=1):
+    def data(self, array, segment_id=1):
         """
         Retrieve the data from an array corresponding to a segment_id.
 
@@ -133,7 +140,7 @@ class SegmentVisitor(object):
         arr_flat = array.ravel()
 
         # Check for bounds
-        if (i > self.max_seg_id) or (i < self.min_seg_id):
+        if (i > self.max_id) or (i < self.min_id):
             data = numpy.array([])
             return data
 
@@ -145,7 +152,7 @@ class SegmentVisitor(object):
         return data
 
 
-    def get_segment_locations(self, segment_id=1):
+    def locations(self, segment_id=1):
         """
         Retrieve the pixel locations corresponding to a segment_id.
 
@@ -162,7 +169,7 @@ class SegmentVisitor(object):
         i = segment_id
 
         # Check for bounds
-        if (i > self.max_seg_id) or (i < self.min_seg_id):
+        if (i > self.max_id) or (i < self.min_id):
             idx = (numpy.array([]), numpy.array([]))
             return idx
 
@@ -175,8 +182,7 @@ class SegmentVisitor(object):
         return idx
 
 
-    def segment_total(self, array, segment_ids=None, nan=False,
-                      dataframe=False):
+    def total(self, array, ids=None, nan=False, dataframe=False):
         """
         Calculates the total value per segment given a 2D array containing
         data.
@@ -185,8 +191,8 @@ class SegmentVisitor(object):
             A 2D NumPy array containing the data to be extracted given
             a segment_id.
 
-        :param segment_ids:
-            A list of integers corresponding to the segment_ids of interest.
+        :param ids:
+            A list of integers corresponding to the ids of interest.
             Default is to calculate the mean value for every segment.
 
         :param nan:
@@ -208,28 +214,28 @@ class SegmentVisitor(object):
         hist = self.histogram
         ri = self.ri
 
-        if segment_ids:
-            if not isinstance(segment_ids, list):
-                msg = "segment_ids must be of type list!"
+        if ids:
+            if not isinstance(ids, list):
+                msg = "ids must be of type list!"
                 raise TypeError(msg)
 
-            # Get a unique listing of the segment_ids
-            s = numpy.unique(numpy.array(segment_ids))
+            # Get a unique listing of the ids
+            s = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
             min_id = numpy.min(s)
             max_id = numpy.max(s)
-            if not (min_id >= self.min_seg_id):
+            if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
-                msg = msg.format(self.min_seg_id)
+                msg = msg.format(self.min_id)
                 raise Exception(msg)
-            if not (max_id <= self.max_seg_id):
+            if max_id > self.max_id:
                 msg = "The maximum segment ID in the dataset is {}"
-                msg = msg.format(self.max_seg_id)
+                msg = msg.format(self.max_id)
                 raise Exception(msg)
         else:
-            s = self.segment_ids
+            s = self.ids
 
         # Initialise a dictionary to hold the mean value per segment
         total_seg = {}
@@ -238,13 +244,13 @@ class SegmentVisitor(object):
         # Do we check for the presence of NaN's
         if nan:
             for i in s:
-                if (hist[i] == 0):
+                if hist[i] == 0:
                     continue
                 total = numpy.nansum(arr_flat[ri[ri[i]:ri[i+1]]])
                 total_seg[i] = total
         else:
             for i in s:
-                if (hist[i] == 0):
+                if hist[i] == 0:
                     continue
                 total = numpy.sum(arr_flat[ri[ri[i]:ri[i+1]]])
                 total_seg[i] = total
@@ -262,8 +268,7 @@ class SegmentVisitor(object):
             return total_seg
 
 
-    def segment_mean(self, array, segment_ids=None, nan=False,
-                     dataframe=False):
+    def mean(self, array, ids=None, nan=False, dataframe=False):
         """
         Calculates the mean value per segment given a 2D array containing data.
 
@@ -271,8 +276,8 @@ class SegmentVisitor(object):
             A 2D NumPy array containing the data to be extracted given
             a segment_id.
 
-        :param segment_ids:
-            A list of integers corresponding to the segment_ids of interest.
+        :param ids:
+            A list of integers corresponding to the ids of interest.
             Default is to calculate the mean value for every segment.
 
         :param nan:
@@ -294,29 +299,29 @@ class SegmentVisitor(object):
         hist = self.histogram
         ri = self.ri
 
-        if segment_ids:
-            if not isinstance(segment_ids, list):
-                msg = "segment_ids must be of type list!"
+        if ids:
+            if not isinstance(ids, list):
+                msg = "ids must be of type list!"
                 raise TypeError(msg)
 
-            # Get a unique listing of the segment_ids
-            s = numpy.unique(numpy.array(segment_ids))
+            # Get a unique listing of the ids
+            s = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
             min_id = numpy.min(s)
             max_id = numpy.max(s)
-            if not (min_id >= self.min_seg_id):
+            if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
-                msg = msg.format(self.min_seg_id)
+                msg = msg.format(self.min_id)
                 raise Exception(msg)
-            if not (max_id <= self.max_seg_id):
+            if max_id > self.max_id:
                 msg = "The maximum segment ID in the dataset is {}"
-                msg = msg.format(self.max_seg_id)
+                msg = msg.format(self.max_id)
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.segment_ids
+            s = self.ids
 
         # Initialise a dictionary to hold the mean value per segment
         mean_seg = {}
@@ -325,13 +330,13 @@ class SegmentVisitor(object):
         # Do we check for the presence of NaN's
         if nan:
             for i in s:
-                if (hist[i] == 0):
+                if hist[i] == 0:
                     continue
                 xbar = numpy.nanmean(arr_flat[ri[ri[i]:ri[i+1]]])
                 mean_seg[i] = xbar
         else:
             for i in s:
-                if (hist[i] == 0):
+                if hist[i] == 0:
                     continue
                 xbar = numpy.mean(arr_flat[ri[ri[i]:ri[i+1]]])
                 mean_seg[i] = xbar
@@ -349,7 +354,7 @@ class SegmentVisitor(object):
             return mean_seg
 
 
-    def segment_max(self, array, segment_ids=None, nan=False, dataframe=False):
+    def max(self, array, ids=None, nan=False, dataframe=False):
         """
         Calculates the max value per segment given an array containing data.
 
@@ -357,8 +362,8 @@ class SegmentVisitor(object):
             A 2D NumPy array containing the data to be extracted given
             a segment_id.
 
-        :param segment_ids:
-            A list of integers corresponding to the segment_ids of interest.
+        :param ids:
+            A list of integers corresponding to the ids of interest.
             Default is to calculate the maximum value for every segment.
 
         :param nan:
@@ -380,29 +385,29 @@ class SegmentVisitor(object):
         hist = self.histogram
         ri = self.ri
 
-        if segment_ids:
-            if not isinstance(segment_ids, list):
-                msg = "segment_ids must be of type list!"
+        if ids:
+            if not isinstance(ids, list):
+                msg = "ids must be of type list!"
                 raise TypeError(msg)
 
-            # Get a unique listing of the segment_ids
-            s = numpy.unique(numpy.array(segment_ids))
+            # Get a unique listing of the ids
+            s = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
             min_id = numpy.min(s)
             max_id = numpy.max(s)
-            if not (min_id >= self.min_seg_id):
+            if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
-                msg = msg.format(self.min_seg_id)
+                msg = msg.format(self.min_id)
                 raise Exception(msg)
-            if not (max_id <= self.max_seg_id):
+            if max_id > self.max_id:
                 msg = "The maximum segment ID in the dataset is {}"
-                msg = msg.format(self.max_seg_id)
+                msg = msg.format(self.max_id)
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.segment_ids
+            s = self.ids
 
         # Initialise a dictionary to hold the max value per segment
         max_seg = {}
@@ -411,13 +416,13 @@ class SegmentVisitor(object):
         # Do we check for the presence of NaN's
         if nan:
             for i in s:
-                if (hist[i] == 0):
+                if hist[i] == 0:
                     continue
                 mx_ = numpy.nanmax(arr_flat[ri[ri[i]:ri[i+1]]])
                 max_seg[i] = mx_
         else:
             for i in s:
-                if (hist[i] == 0):
+                if hist[i] == 0:
                     continue
                 mx_ = numpy.max(arr_flat[ri[ri[i]:ri[i+1]]])
                 max_seg[i] = mx_
@@ -435,7 +440,7 @@ class SegmentVisitor(object):
             return max_seg
 
 
-    def segment_min(self, array, segment_ids=None, nan=False, dataframe=False):
+    def min(self, array, ids=None, nan=False, dataframe=False):
         """
         Calculates the min value per segment given an array containing data.
 
@@ -443,8 +448,8 @@ class SegmentVisitor(object):
             A 2D NumPy array containing the data to be extracted given
             a segment_id.
 
-        :param segment_ids:
-            A list of integers corresponding to the segment_ids of interest.
+        :param ids:
+            A list of integers corresponding to the ids of interest.
             Default is to calculate the minimum value for every segment.
 
         :param nan:
@@ -466,29 +471,29 @@ class SegmentVisitor(object):
         hist = self.histogram
         ri = self.ri
 
-        if segment_ids:
-            if not isinstance(segment_ids, list):
-                msg = "segment_ids must be of type list!"
+        if ids:
+            if not isinstance(ids, list):
+                msg = "ids must be of type list!"
                 raise TypeError(msg)
 
-            # Get a unique listing of the segment_ids
-            s = numpy.unique(numpy.array(segment_ids))
+            # Get a unique listing of the ids
+            s = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
             min_id = numpy.min(s)
             max_id = numpy.max(s)
-            if not (min_id >= self.min_seg_id):
+            if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
-                msg = msg.format(self.min_seg_id)
+                msg = msg.format(self.min_id)
                 raise Exception(msg)
-            if not (max_id <= self.max_seg_id):
+            if max_id > self.max_id:
                 msg = "The maximum segment ID in the dataset is {}"
-                msg = msg.format(self.max_seg_id)
+                msg = msg.format(self.max_id)
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.segment_ids
+            s = self.ids
 
         # Initialise a dictionary to hold the min value per segment
         min_seg = {}
@@ -497,13 +502,13 @@ class SegmentVisitor(object):
         # Do we check for the presence of NaN's
         if nan:
             for i in s:
-                if (hist[i] == 0):
+                if hist[i] == 0:
                     continue
                 mn_ = numpy.nanmin(arr_flat[ri[ri[i]:ri[i+1]]])
                 min_seg[i] = mn_
         else:
             for i in s:
-                if (hist[i] == 0):
+                if hist[i] == 0:
                     continue
                 mn_ = numpy.min(arr_flat[ri[ri[i]:ri[i+1]]])
                 min_seg[i] = mn_
@@ -521,8 +526,8 @@ class SegmentVisitor(object):
             return min_seg
 
 
-    def segment_stddev(self, array, segment_ids=None, ddof=1, nan=False,
-                       dataframe=False):
+    def stddev(self, array, ids=None, ddof=1, nan=False,
+               dataframe=False):
         """
         Calculates the standard deviation per segment given an
         array containing data. By default the sample standard deviation is
@@ -532,8 +537,8 @@ class SegmentVisitor(object):
             A 2D NumPy array containing the data to be extracted given
             a segment_id.
 
-        :param segment_ids:
-            A list of integers corresponding to the segment_ids of interest.
+        :param ids:
+            A list of integers corresponding to the ids of interest.
             Default is to calculate the standard deviation for every segment.
 
         :param ddof:
@@ -559,29 +564,29 @@ class SegmentVisitor(object):
         hist = self.histogram
         ri = self.ri
 
-        if segment_ids:
-            if not isinstance(segment_ids, list):
-                msg = "segment_ids must be of type list!"
+        if ids:
+            if not isinstance(ids, list):
+                msg = "ids must be of type list!"
                 raise TypeError(msg)
 
-            # Get a unique listing of the segment_ids
-            s = numpy.unique(numpy.array(segment_ids))
+            # Get a unique listing of the ids
+            s = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
             min_id = numpy.min(s)
             max_id = numpy.max(s)
-            if not (min_id >= self.min_seg_id):
+            if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
-                msg = msg.format(self.min_seg_id)
+                msg = msg.format(self.min_id)
                 raise Exception(msg)
-            if not (max_id <= self.max_seg_id):
+            if max_id > self.max_id:
                 msg = "The maximum segment ID in the dataset is {}"
-                msg = msg.format(self.max_seg_id)
+                msg = msg.format(self.max_id)
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.segment_ids
+            s = self.ids
 
         # Initialise a dictionary to hold the std dev value per segment
         stddev_seg = {}
@@ -590,13 +595,13 @@ class SegmentVisitor(object):
         # Do we check for the presence of NaN's
         if nan:
             for i in s:
-                if (hist[i] == 0):
+                if hist[i] == 0:
                     continue
                 stddev = numpy.nanstd(arr_flat[ri[ri[i]:ri[i+1]]], ddof=ddof)
                 stddev_seg[i] = stddev
         else:
             for i in s:
-                if (hist[i] == 0):
+                if hist[i] == 0:
                     continue
                 stddev = numpy.std(arr_flat[ri[ri[i]:ri[i+1]]], ddof=ddof)
                 stddev_seg[i] = stddev
@@ -615,13 +620,12 @@ class SegmentVisitor(object):
             return stddev_seg
 
 
-    def segment_area(self, segment_ids=None, scale_factor=1.0,
-                     dataframe=False):
+    def area(self, ids=None, scale_factor=1.0, dataframe=False):
         """
         Returns the area for a given segment ID.
 
-        :param segment_ids:
-            A list of integers corresponding to the segment_ids of interest.
+        :param ids:
+            A list of integers corresponding to the ids of interest.
             Default is to return the area for every segment.
 
         :param scale_factor:
@@ -641,29 +645,29 @@ class SegmentVisitor(object):
         """
         hist = self.histogram
 
-        if segment_ids:
-            if not isinstance(segment_ids, list):
-                msg = "segment_ids must be of type list!"
+        if ids:
+            if not isinstance(ids, list):
+                msg = "ids must be of type list!"
                 raise TypeError(msg)
 
-            # Get a unique listing of the segment_ids
-            s = numpy.unique(numpy.array(segment_ids))
+            # Get a unique listing of the ids
+            s = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
             min_id = numpy.min(s)
             max_id = numpy.max(s)
-            if not (min_id >= self.min_seg_id):
+            if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
-                msg = msg.format(self.min_seg_id)
+                msg = msg.format(self.min_id)
                 raise Exception(msg)
-            if not (max_id <= self.max_seg_id):
+            if max_id > self.max_id:
                 msg = "The maximum segment ID in the dataset is {}"
-                msg = msg.format(self.max_seg_id)
+                msg = msg.format(self.max_id)
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.segment_ids
+            s = self.ids
 
         # Initialise a dictionary to hold the area value per segment
         area_seg = {}
@@ -684,7 +688,7 @@ class SegmentVisitor(object):
             return area_seg
 
 
-    def reset_segment_ids(self, inplace=True):
+    def reset_ids(self, inplace=True):
         """
         Relabels segment id's starting at id 1.
         Useful for when the segmented array has segments removed
@@ -701,7 +705,7 @@ class SegmentVisitor(object):
             made before resetting the segment id's and returning the
             resulting 2D segmented array.
             If inplace=True, then the segment id's will be changed
-            inplace, and the SegmentVisitor class is re-intiialised.
+            inplace, and the Segments class is re-intiialised.
         """
         if inplace:
             array = self.array_1D
@@ -729,7 +733,7 @@ class SegmentVisitor(object):
             return array.reshape(self.array.shape)
 
 
-    def sieve_segments(self, value, minf=True, inplace=True):
+    def sieve(self, value, minf=True, inplace=True):
         """
         Sieves segments by filtering based on a minimum or maximum
         area criterion. If filtering by minimum (default) then segments
@@ -752,8 +756,8 @@ class SegmentVisitor(object):
             made before filtering the segments. A 2D NumPy array will
             be returned.
             If inplace=True, then the filtering will be performed
-            inplace. Before returning, the SegmentVisitor class is
-            re-intialised and the reset_segment_ids is run.  No array
+            inplace. Before returning, the Segments class is
+            re-intialised and the reset_ids is run.  No array
             is returned.
         """
         if inplace:
@@ -779,17 +783,17 @@ class SegmentVisitor(object):
         if inplace:
             # Reinitialise the segment class and reset the segment id's
             self.__init__(array.reshape(self.array.shape))
-            self.reset_segment_ids()
+            self.reset_ids()
         else:
             return array.reshape(self.array.shape)
 
 
-    def segment_bounding_box(self, segment_ids=None):
+    def bounding_box(self, ids=None):
         """
         Calculates the minimum bounding box in pixel/array co-ordinates.
 
-        :param segment_ids:
-            A list of integers corresponding to the segment_ids of interest.
+        :param ids:
+            A list of integers corresponding to the ids of interest.
             Default is to calculate the bounding box for every segment.
 
         :return:
@@ -800,49 +804,49 @@ class SegmentVisitor(object):
         hist = self.histogram
         ri = self.ri
 
-        if segment_ids:
-            if not isinstance(segment_ids, list):
-                msg = "segment_ids must be of type list!"
+        if ids:
+            if not isinstance(ids, list):
+                msg = "ids must be of type list!"
                 raise TypeError(msg)
 
-            # Get a unique listing of the segment_ids
-            s = numpy.unique(numpy.array(segment_ids))
+            # Get a unique listing of the ids
+            s = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
             min_id = numpy.min(s)
             max_id = numpy.max(s)
-            if not (min_id >= self.min_seg_id):
+            if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
-                msg = msg.format(self.min_seg_id)
+                msg = msg.format(self.min_id)
                 raise Exception(msg)
-            if not (max_id <= self.max_seg_id):
+            if max_id > self.max_id:
                 msg = "The maximum segment ID in the dataset is {}"
-                msg = msg.format(self.max_seg_id)
+                msg = msg.format(self.max_id)
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.segment_ids
+            s = self.ids
 
         # Initialise a dictionary to hold the bounding box per segment
         yx_start_end_seg = {}
 
         # Find the minimum bounding box per segment
         for i in s:
-            if (hist[i] == 0):
+            if hist[i] == 0:
                 continue
             idx = ri[ri[i]:ri[i+1]]
             idx = numpy.array(array_indices(self.dims, idx, dimensions=True))
-            min_yx = numpy.min(idx, axis=1)                                     
-            max_yx = numpy.max(idx, axis=1) + 1                                 
+            min_yx = numpy.min(idx, axis=1)
+            max_yx = numpy.max(idx, axis=1) + 1
             yx_start_end = ((min_yx[0], max_yx[0]), (min_yx[1], max_yx[1]))
             yx_start_end_seg[i] = yx_start_end
 
         return yx_start_end_seg
 
 
-    def segment_basic_statistics(self, array, segment_ids=None, ddof=1,
-                                 scale_factor=1.0, nan=False):
+    def basic_statistics(self, array, ids=None, ddof=1,
+                         scale_factor=1.0, nan=False):
         """
         Calculates the basic statistics per segment given an
         array containing data. Statistical measures calculated are:
@@ -858,8 +862,8 @@ class SegmentVisitor(object):
             A 2D NumPy array containing the data to be extracted given
             a segment_id.
 
-        :param segment_ids:
-            A list of integers corresponding to the segment_ids of interest.
+        :param ids:
+            A list of integers corresponding to the ids of interest.
             Default is to calculate the standard deviation for every segment.
 
         :param ddof:
@@ -882,28 +886,28 @@ class SegmentVisitor(object):
         hist = self.histogram
         ri = self.ri
 
-        if segment_ids:
-            if not isinstance(segment_ids, list):
-                msg = "segment_ids must be of type list!"
+        if ids:
+            if not isinstance(ids, list):
+                msg = "ids must be of type list!"
                 raise TypeError(msg)
 
-            # Get a unique listing of the segment_ids
-            s = numpy.unique(numpy.array(segment_ids))
+            # Get a unique listing of the ids
+            s = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
             min_id = numpy.min(s)
             max_id = numpy.max(s)
-            if not (min_id >= self.min_seg_id):
+            if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
-                msg = msg.format(self.min_seg_id)
+                msg = msg.format(self.min_id)
                 raise Exception(msg)
-            if not (max_id <= self.max_seg_id):
+            if max_id > self.max_id:
                 msg = "The maximum segment ID in the dataset is {}"
-                msg = msg.format(self.max_seg_id)
+                msg = msg.format(self.max_id)
                 raise Exception(msg)
         else:
-            s = self.segment_ids
+            s = self.ids
 
         # Define the nan/non-nan function mapping
         mean_ = {True: numpy.nanmean, False: numpy.mean}
@@ -923,7 +927,7 @@ class SegmentVisitor(object):
 
         # Find the stats per segment
         for i in s:
-            if (hist[i] == 0):
+            if hist[i] == 0:
                 continue
             idx = ri[ri[i]:ri[i+1]]
             data = arr_flat[idx]
@@ -947,3 +951,82 @@ class SegmentVisitor(object):
         df.reset_index(drop=True, inplace=True)
 
         return df
+
+
+def rasterise_vector(vector_filename, shape, transform, crs,
+                     raster_filename=None, dtype='uint32'):
+    """
+    Given a full file pathname to a vector file, rasterise the
+    vectors geometry by either provding the raster shape and
+    transform, or a raster file on disk.
+
+    :param vector_filename:
+        A full file pathname to an OGR compliant vector file.
+
+    :param shape:
+        Optional. If provided, then shape is a tuple containing the
+        (height, width) of an array. If omitted, then `shape` will
+        be retrieved via the raster provided in `raster_filename`.
+
+    :param transform:
+        Optional. If provided, then an `Affine` containing the
+        transformation matrix parameters. If omitted, then `transform`
+        will be retrieved via the `raster_filename`.
+
+    :param crs:
+        Optional. If provided, then a Proj4 styled dictionary. If
+        omitted, then `crs` will be retreived via the
+        `raster_filename`.
+
+    :param raster_filename:
+        A full file pathname to a GDAL compliant raster file.
+
+    :return:
+        A `NumPy` array of the same dimensions provided by either the
+        `shape` or `raster_filename`.
+
+    :notes:
+        The vector file will be re-projected as required in order
+        to match the same crs as provided by `crs` or by
+        `raster_filename`.
+    """
+    with fiona.open(vector_filename, 'r') as v_src:
+        if raster_filename is not None:
+            with rasterio.open(raster_filename, 'r') as r_src:
+                transform = r_src.affine
+                shape = r_src.shape
+                crs = r_src.crs
+                r_bounds = tuple(r_src.bounds)
+        else:
+            ul = (0, 0) * transform
+            lr = (shape[1], shape[0]) * transform
+            min_x, max_x = min(ul[0], lr[0]), max(ul[0], lr[0])
+            min_y, max_y = min(ul[1], lr[1]), max(ul[1], lr[1])
+            r_bounds = (min_x, min_y, max_x, max_y)
+
+        shapes = []
+        index = rtree.index.Index()
+        # get crs, check if the same as the image and project as needed
+        if not is_same_crs(v_src.crs, crs):
+            for feat in v_src:
+                new_geom = transform_geom(v_src.crs, crs, feat['geometry'])
+                shapes.append(new_geom, int(feat['id']) + 1)
+                index.append(int(feat['id']), shp(new_geom).bounds)
+
+        # we check the bounding box of each geometry object against
+        # the image bounding box. Basic pre-selection to filter which
+        # vectors are to be rasterised
+
+        for feat in v_src:
+            shapes.append(feat['geometry'], int(feat['id']) + 1)
+            index.insert(int(feat['id']), shp(feat['geometry']).bounds)
+
+        # bounding box intersection
+        fids = index.intersection(r_bounds)
+
+    selected_shapes = [shapes[fid] for fid in fids]
+
+    rasterised = rasterize(selected_shapes, out_shape=shape, fill=0,
+                           transform=transform, dtype=dtype)
+
+    return rasterised
