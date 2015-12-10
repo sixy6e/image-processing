@@ -953,7 +953,7 @@ class Segments(object):
         return df
 
 
-def rasterise_vector(vector_filename, shape, transform, crs,
+def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
                      raster_filename=None, dtype='uint32'):
     """
     Given a full file pathname to a vector file, rasterise the
@@ -1004,22 +1004,24 @@ def rasterise_vector(vector_filename, shape, transform, crs,
             min_y, max_y = min(ul[1], lr[1]), max(ul[1], lr[1])
             r_bounds = (min_x, min_y, max_x, max_y)
 
-        shapes = []
+        shapes = {}
         index = rtree.index.Index()
         # get crs, check if the same as the image and project as needed
         if not is_same_crs(v_src.crs, crs):
             for feat in v_src:
                 new_geom = transform_geom(v_src.crs, crs, feat['geometry'])
-                shapes.append(new_geom, int(feat['id']) + 1)
-                index.append(int(feat['id']), shp(new_geom).bounds)
+                fid = int(feat['id'])
+                shapes[fid] = (new_geom, fid + 1)
+                index.insert(fid, shp(new_geom).bounds)
 
         # we check the bounding box of each geometry object against
         # the image bounding box. Basic pre-selection to filter which
         # vectors are to be rasterised
 
         for feat in v_src:
-            shapes.append(feat['geometry'], int(feat['id']) + 1)
-            index.insert(int(feat['id']), shp(feat['geometry']).bounds)
+            fid = int(feat['id'])
+            shapes[fid] = (feat['geometry'], fid + 1)
+            index.insert(fid, shp(feat['geometry']).bounds)
 
         # bounding box intersection
         fids = index.intersection(r_bounds)
