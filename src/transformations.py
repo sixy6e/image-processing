@@ -4,14 +4,14 @@ import numpy
 from idl_functions import histogram
 
 
-def histogram_backprojection(array, roi, nbins=256):
+def histogram_backprojection(array, roi, minv=None, maxv=None, nbins=256):
     """
     
     """
     # the histogram of the full image should be done first
     # so as to get the full dynamic range
-    h = histogram(roi, nbins=nbins, omin='omin', omax='omax',
-                  locations='loc')
+    h = histogram(roi, nbins=nbins, minv=minv, maxv=maxv, omin='omin',
+                  omax='omax', locations='loc')
 
     hist = h['histogram']
     omin = h['omin']
