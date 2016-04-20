@@ -1013,16 +1013,15 @@ def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
                 fid = int(feat['id'])
                 shapes[fid] = (new_geom, fid + 1)
                 index.insert(fid, shp(new_geom).bounds)
+        else:
+            for feat in v_src:
+                fid = int(feat['id'])
+                shapes[fid] = (feat['geometry'], fid + 1)
+                index.insert(fid, shp(feat['geometry']).bounds)
 
         # we check the bounding box of each geometry object against
         # the image bounding box. Basic pre-selection to filter which
         # vectors are to be rasterised
-
-        for feat in v_src:
-            fid = int(feat['id'])
-            shapes[fid] = (feat['geometry'], fid + 1)
-            index.insert(fid, shp(feat['geometry']).bounds)
-
         # bounding box intersection
         fids = index.intersection(r_bounds)
 
