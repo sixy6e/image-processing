@@ -38,18 +38,6 @@ from shapely.geometry import shape as shp
 from idl_functions import histogram
 from idl_functions import array_indices
 
-# TODO: calculate the seg ids something like this
-"""
-x = numpy.arange(seg.histogram.shape[0])
-
-x
-array([    0,     1,     2, ...,  9998,  9999, 10000])
-
-x[wh]
-array([    1,     2,     3, ...,  9998,  9999, 10000])
-"""
-
-
 
 class Segments(object):
 
