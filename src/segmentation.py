@@ -31,9 +31,18 @@ from fiona.transform import transform_geom
 import numpy
 import pandas
 import rasterio
+from rasterio.crs import CRS
 from rasterio.features import rasterize
-import rtree
+
+# check for rtree
+try:
+    import rtree
+    RTREE = True
+except ImportError:
+    RTREE = False
+
 from shapely.geometry import shape as shp
+from shapely.geometry import box, mapping
 from idl_functions import histogram
 from idl_functions import array_indices
 
@@ -1016,29 +1025,54 @@ def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
             min_y, max_y = min(ul[1], lr[1]), max(ul[1], lr[1])
             r_bounds = (min_x, min_y, max_x, max_y)
 
-        shapes = {}
-        index = rtree.index.Index()
+        # rasterio has a CRS class that makes for easier crs comparison
+        v_crs = CRS(v_src.crs)
 
-        # get crs, check if the same as the image and project as needed
-        if not v_src.crs == crs:
-            for feat in v_src:
-                new_geom = transform_geom(v_src.crs, crs, feat['geometry'])
-                fid = int(feat['id'])
-                shapes[fid] = (new_geom, fid + 1)
-                index.insert(fid, shp(new_geom).bounds)
+        # use rtree where possible for speedy shape reduction
+        if RTREE:
+            shapes = {}
+            index = rtree.index.Index()
+
+            # get crs, check if the same as the image and project as needed
+            if not v_crs == crs:
+                # fiona may update to the class crs...
+                crs = crs.to_dict()
+                for feat in v_src:
+                    new_geom = transform_geom(v_src.crs, crs, feat['geometry'])
+                    fid = int(feat['id'])
+                    shapes[fid] = (new_geom, fid + 1)
+                    index.insert(fid, shp(new_geom).bounds)
+            else:
+                for feat in v_src:
+                    fid = int(feat['id'])
+                    shapes[fid] = (feat['geometry'], fid + 1)
+                    index.insert(fid, shp(feat['geometry']).bounds)
+
+            # we check the bounding box of each geometry object against
+            # the image bounding box. Basic pre-selection to filter which
+            # vectors are to be rasterised
+            # bounding box intersection
+            fids = index.intersection(r_bounds)
+            selected_shapes = [shapes[fid] for fid in fids]
         else:
-            for feat in v_src:
-                fid = int(feat['id'])
-                shapes[fid] = (feat['geometry'], fid + 1)
-                index.insert(fid, shp(feat['geometry']).bounds)
+            selected_shapes = []
+            r_poly = box(*r_bounds)
+            if not v_crs == crs:
+                # fiona may update to the class crs...
+                crs = crs.to_dict()
+                for feat in v_src:
+                    new_geom = transform_geom(v_src.crs, crs, feat['geometry'])
+                    fid = int(feat['id'])
+                    geom = mapping(new_geom)
+                    if geom.intersects(r_poly):
+                        selected_shapes.append((new_geom, fid + 1))
+            else:
+                for feat in v_src:
+                    fid = int(feat['id'])
+                    geom = mapping(feat['geometry'])
+                    if geom.intersects(r_poly):
+                        selected_shapes.append((feat['geometry'], fid + 1))
 
-        # we check the bounding box of each geometry object against
-        # the image bounding box. Basic pre-selection to filter which
-        # vectors are to be rasterised
-        # bounding box intersection
-        fids = index.intersection(r_bounds)
-
-    selected_shapes = [shapes[fid] for fid in fids]
 
     rasterised = rasterize(selected_shapes, out_shape=shape, fill=0,
                            transform=transform, dtype=dtype)
