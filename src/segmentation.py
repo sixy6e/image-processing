@@ -31,7 +31,6 @@ from fiona.transform import transform_geom
 import numpy
 import pandas
 import rasterio
-from rasterio.crs import is_same_crs
 from rasterio.features import rasterize
 import rtree
 from shapely.geometry import shape as shp
@@ -1019,8 +1018,9 @@ def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
 
         shapes = {}
         index = rtree.index.Index()
+
         # get crs, check if the same as the image and project as needed
-        if not is_same_crs(v_src.crs, crs):
+        if not v_src.crs == crs:
             for feat in v_src:
                 new_geom = transform_geom(v_src.crs, crs, feat['geometry'])
                 fid = int(feat['id'])
