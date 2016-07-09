@@ -38,13 +38,26 @@ from shapely.geometry import shape as shp
 from idl_functions import histogram
 from idl_functions import array_indices
 
+# TODO: calculate the seg ids something like this
+"""
+x = numpy.arange(seg.histogram.shape[0])
+
+x
+array([    0,     1,     2, ...,  9998,  9999, 10000])
+
+x[wh]
+array([    1,     2,     3, ...,  9998,  9999, 10000])
+"""
+
+
 
 class Segments(object):
 
     """
     Given a segmented array, the Segments class will find the segments and
     optionally calculate basic statistics. A value of zero is considered
-    to be the background and ignored.
+    to be the background and ignored, unless `include_zero` is set to
+    True.
 
     Designed as an easier interface for analysing segmented regions.
 
@@ -64,12 +77,18 @@ class Segments(object):
         >>> seg_ds.locations(segment_id=3)
     """
 
-    def __init__(self, array):
+    def __init__(self, array, include_zero=False):
         """
         Initialises the Segments class.
 
         :param array:
             A 2D NumPy array containing the segmented array.
+
+        :param include_zero:
+            A `bool` indicating whether or not to include the
+            value of zero as a valid segment id, rather than
+            ignore it.
+            Default is False, ignore the value of zero.
         """
         if array.ndim != 2:
             msg = "Dimensions of array must be 2D! Supplied array is {dims}"
@@ -89,10 +108,10 @@ class Segments(object):
         self.n_segments = None
         self.ids = None
 
-        self._find_segments()
+        self._find_segments(include_zero=include_zero)
 
 
-    def _find_segments(self):
+    def _find_segments(self, include_zero=False):
         """
         Determines the pixel locations for every segment/region contained
         within a 2D array. The minimum and maximum segemnt ID's/labels are
@@ -103,18 +122,24 @@ class Segments(object):
         self.histogram = h['histogram']
         self.ri = h['ri']
 
-        # Determine the min and max segment ID's
-        mx = numpy.max(self.array)
-        if mx > 0:
-            mn = numpy.min(self.array[self.array > 0])
+        # Determine the segment ids
+        idx = self.histogram != 0
+        ids = numpy.arange(self.histogram.shape[0])[idx]
+
+        # include or exclude the segment id of 0
+        if include_zero:
+            self.ids = ids
         else:
-            mn = mx
+            if ids[0] == 0:
+                self.ids = ids[1:]
+            else:
+                self.ids = ids
 
-        self.min_id = mn
-        self.max_id = mx
+        # min & max segment id
+        self.min_id = self.ids[0]
+        self.max_id = self.ids[-1]
 
-        # Determine the segment ids and the number of segments
-        self.ids = numpy.where(self.histogram > 0)[0][1:]
+        # number of segments
         self.n_segments = self.ids.shape[0]
 
 
