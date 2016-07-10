@@ -73,8 +73,7 @@ def calculate_binsize(array, minv=None, maxv=None, nbins=256):
     minv = data_convert(minv, array.dtype.name)
     maxv = data_convert(maxv, array.dtype.name)
 
-    # ENVI appears to ceil the result
-    binsize = numpy.ceil((maxv - minv) / (nbins - 1.0))
+    binsize = (maxv - minv) / (nbins - 1.0)
 
     return binsize, minv, maxv
 
@@ -212,6 +211,7 @@ def gauss():
     """
     
     """
+    raise NotImplementedError
 
 
 def log(array, minv=None, maxv=None, nbins=256, top=255):
@@ -268,4 +268,4 @@ def hist_match():
     """
     
     """
-
+    raise NotImplementedError
