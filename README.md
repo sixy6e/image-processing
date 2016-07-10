@@ -54,3 +54,36 @@ print "Number of segments: {}".format(seg.n_segments)
 seg.sieve(30)
 print "Number of segments: {}".format(seg.n_segments)
 ```
+
+
+Contrast enhancement example
+----------------------------
+
+```python
+import numpy
+import matplotlib.pyplot as plt
+from image_processing import contrast
+
+dims = (1000, 1000)
+data = numpy.random.ranf(dims)
+
+lp3 = contrast.linear_percent(data, percent=3)
+lg = contrast.log(data)
+sq = contrast.square_root(data)
+eq = contrast.equalisation(data)
+
+fig = plt.figure()
+fig.add_subplot(221)
+plt.title('Linear 2%')
+plt.imshow(lp)
+fig.add_subplot(222)
+plt.title('Log')
+plt.imshow(lg)
+fig.add_subplot(223)
+plt.title('Square Root')
+plt.imshow(sq)
+fig.add_subplot(224)
+plt.title('Equalisation')
+plt.imshow(eq)
+plt.show()
+```
