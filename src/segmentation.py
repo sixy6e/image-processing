@@ -1063,13 +1063,13 @@ def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
                 for feat in v_src:
                     new_geom = transform_geom(v_src.crs, crs, feat['geometry'])
                     fid = int(feat['id'])
-                    geom = mapping(new_geom)
+                    geom = shp(new_geom)
                     if geom.intersects(r_poly):
                         selected_shapes.append((new_geom, fid + 1))
             else:
                 for feat in v_src:
                     fid = int(feat['id'])
-                    geom = mapping(feat['geometry'])
+                    geom = shp(feat['geometry'])
                     if geom.intersects(r_poly):
                         selected_shapes.append((feat['geometry'], fid + 1))
 
