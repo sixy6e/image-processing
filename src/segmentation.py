@@ -139,8 +139,12 @@ class Segments(object):
                 self.ids = ids
 
         # min & max segment id
-        self.min_id = self.ids[0]
-        self.max_id = self.ids[-1]
+        if len(self.ids) == 0:
+            self.min_id = None
+            self.max_id = None
+        else:
+            self.min_id = self.ids[0]
+            self.max_id = self.ids[-1]
 
         # number of segments
         self.n_segments = self.ids.shape[0]
@@ -710,7 +714,7 @@ class Segments(object):
 
         for i in seg_ids:
             area_seg['Segment_IDs'][i] = i
-            area_seg'Area'][i] = hist[i] * scale_factor
+            area_seg['Area'][i] = hist[i] * scale_factor
 
         if PANDAS and dataframe:
             df = pandas.DataFrame(area_seg)
@@ -878,7 +882,7 @@ class Segments(object):
 
 
     def basic_statistics(self, array, ids=None, ddof=1,
-                         scale_factor=1.0, nan=False):
+                         scale_factor=1.0, nan=False, dataframe=False):
         """
         Calculates the basic statistics per segment given an
         array containing data. Statistical measures calculated are:
@@ -909,6 +913,11 @@ class Segments(object):
         :param nan:
             A boolean indicating whether we check for occurences of NaN
             during the standard deviation calculation. Default is False.
+
+        :param dataframe:
+            A boolean indicating the return type. If set to True, then
+            a `pandas.DataFrame` structure will be returned. Default is
+            to return a dictionary with the `segment ids's` as the keys.
 
         :return:
             If `dataframe` is set to `True`, then a `pandas.DataFrame`
