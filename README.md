@@ -8,12 +8,12 @@ Requirements
 
 * NumPy
 * SciPy
-* pandas
+* pandas (optional)
 * rasterio
 * fiona
 * shapely
-* Rtree
-* libspatialindex
+* Rtree (optional)
+* libspatialindex (optional)
 * idl-functions
 
 
@@ -30,8 +30,15 @@ seg = Segments(class_data)
 
 data = numpy.random.randf(dims)
 
-stats = seg.basic_statistics(data)
+# pandas DataFrame example
+stats = seg.basic_statistics(data, dataframe=True)
 print stats.head(10)
+print stats["Mean"].head(10)
+
+# compound NumPy array example
+stats_c = seg.basic_statistics(data)
+print stats_c[0:10]
+print stats_c["Mean"][0:10]
 
 print "Number of segments: {}".format(seg.n_segments)
 
