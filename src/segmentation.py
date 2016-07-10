@@ -29,7 +29,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import fiona
 from fiona.transform import transform_geom
 import numpy
-import pandas
+
+# check for pandas
+try:
+    import pandas
+    PANDAS = True
+except ImportError:
+    PANDAS = False
+
 import rasterio
 from rasterio.crs import CRS
 from rasterio.features import rasterize
@@ -227,10 +234,13 @@ class Segments(object):
 
         :return:
             If `dataframe` is set to `True`, then a `pandas.DataFrame`
-            will be returned. Otherwise a dictionary where each key
-            corresponds to a segment ID, and each value is the total
-            value for that segment ID.
+            will be returned. Otherwise a compound `NumPy` datatype
+            array will be returned.
         """
+        # can't return a dataframe if pandas isn't available
+        if not PANDAS:
+            dataframe = False
+
         arr_flat = array.ravel()
         hist = self.histogram
         ri = self.ri
@@ -241,12 +251,12 @@ class Segments(object):
                 raise TypeError(msg)
 
             # Get a unique listing of the ids
-            s = numpy.unique(numpy.array(ids))
+            seg_ids = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
-            min_id = numpy.min(s)
-            max_id = numpy.max(s)
+            min_id = numpy.min(seg_ids)
+            max_id = numpy.max(seg_ids)
             if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
                 msg = msg.format(self.min_id)
@@ -256,34 +266,31 @@ class Segments(object):
                 msg = msg.format(self.max_id)
                 raise Exception(msg)
         else:
-            s = self.ids
+            seg_ids = self.ids
 
-        # Initialise a dictionary to hold the mean value per segment
-        total_seg = {}
+        # get a list of the segment id's that contain data
+        segment_ids = [i for i in seg_ids if hist[i] != 0]
+
+        # initialise the output array
+        dtype = numpy.dtype([('Segment_IDs', numpy.int),
+                             ('Total', numpy.float)])
+        total_seg = numpy.zeros(len(segment_ids), dtype=dtype)
 
         # Calculate the mean value per segment
         # Do we check for the presence of NaN's
         if nan:
-            for i in s:
-                if hist[i] == 0:
-                    continue
-                total = numpy.nansum(arr_flat[ri[ri[i]:ri[i+1]]])
-                total_seg[i] = total
+            for i, seg in enumerate(segment_ids):
+                total = numpy.nansum(arr_flat[ri[ri[seg]:ri[seg+1]]])
+                total_seg['Segment_IDs'][i] = seg
+                total_seg['Total'][i] = total
         else:
-            for i in s:
-                if hist[i] == 0:
-                    continue
-                total = numpy.sum(arr_flat[ri[ri[i]:ri[i+1]]])
-                total_seg[i] = total
+            for i, seg in enumerate(segment_ids):
+                total = numpy.sum(arr_flat[ri[ri[seg]:ri[seg+1]]])
+                total_seg['Segment_IDs'][i] = seg
+                total_seg['Total'][i] = total
 
-        if dataframe:
-            cols = ['Segment_IDs', 'Total']
-            df = pandas.DataFrame(columns=cols, index=total_seg.keys())
-            df['Total'] = pandas.DataFrame.from_dict(total_seg, orient='index')
-
-            # Set the segment ids column and reset the index
-            df['Segment_IDs'] = df.index
-            df.reset_index(drop=True, inplace=True)
+        if PANDAS and dataframe:
+            df = pandas.DataFrame(total_seg)
             return df
         else:
             return total_seg
@@ -312,10 +319,13 @@ class Segments(object):
 
         :return:
             If `dataframe` is set to `True`, then a `pandas.DataFrame`
-            will be returned. Otherwise a dictionary where each key
-            corresponds to a segment ID, and each value is the mean
-            value for that segment ID.
+            will be returned. Otherwise a compound `NumPy` datatype
+            array will be returned.
         """
+        # can't return a dataframe if pandas isn't available
+        if not PANDAS:
+            dataframe = False
+
         arr_flat = array.ravel()
         hist = self.histogram
         ri = self.ri
@@ -326,12 +336,12 @@ class Segments(object):
                 raise TypeError(msg)
 
             # Get a unique listing of the ids
-            s = numpy.unique(numpy.array(ids))
+            seg_ids = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
-            min_id = numpy.min(s)
-            max_id = numpy.max(s)
+            min_id = numpy.min(seg_ids)
+            max_id = numpy.max(seg_ids)
             if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
                 msg = msg.format(self.min_id)
@@ -342,34 +352,31 @@ class Segments(object):
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.ids
+            seg_ids = self.ids
 
-        # Initialise a dictionary to hold the mean value per segment
-        mean_seg = {}
+        # get a list of the segment id's that contain data
+        segment_ids = [i for i in seg_ids if hist[i] != 0]
+
+        # initialise the output array
+        dtype = numpy.dtype([('Segment_IDs', numpy.int),
+                             ('Mean', numpy.float)])
+        mean_seg = numpy.zeros(len(segment_ids), dtype=dtype)
 
         # Calculate the mean value per segment
         # Do we check for the presence of NaN's
         if nan:
-            for i in s:
-                if hist[i] == 0:
-                    continue
-                xbar = numpy.nanmean(arr_flat[ri[ri[i]:ri[i+1]]])
-                mean_seg[i] = xbar
+            for i, seg in enumerate(segment_ids):
+                xbar = numpy.nanmean(arr_flat[ri[ri[seg]:ri[seg+1]]])
+                mean_seg['Segment_IDs'][i] = seg
+                mean_seg['Mean'][i] = xbar
         else:
-            for i in s:
-                if hist[i] == 0:
-                    continue
-                xbar = numpy.mean(arr_flat[ri[ri[i]:ri[i+1]]])
-                mean_seg[i] = xbar
+            for i, seg in enumerate(segment_ids):
+                xbar = numpy.mean(arr_flat[ri[ri[seg]:ri[seg+1]]])
+                mean_seg['Segment_IDs'][i] = seg
+                mean_seg['Mean'][i] = xbar
 
-        if dataframe:
-            cols = ['Segment_IDs', 'Mean']
-            df = pandas.DataFrame(columns=cols, index=mean_seg.keys())
-            df['Mean'] = pandas.DataFrame.from_dict(mean_seg, orient='index')
-
-            # Set the segment ids column and reset the index
-            df['Segment_IDs'] = df.index
-            df.reset_index(drop=True, inplace=True)
+        if PANDAS and dataframe:
+            df = pandas.DataFRame(mean_seg)
             return df
         else:
             return mean_seg
@@ -398,10 +405,13 @@ class Segments(object):
 
         :return:
             If `dataframe` is set to `True`, then a `pandas.DataFrame`
-            will be returned. Otherwise a dictionary where each key
-            corresponds to a segment ID, and each value is the maximum
-            value for that segment ID.
+            will be returned. Otherwise a compound `NumPy` datatype
+            array will be returned.
         """
+        # can't return a dataframe if pandas isn't available
+        if not PANDAS:
+            dataframe = False
+
         arr_flat = array.ravel()
         hist = self.histogram
         ri = self.ri
@@ -412,12 +422,12 @@ class Segments(object):
                 raise TypeError(msg)
 
             # Get a unique listing of the ids
-            s = numpy.unique(numpy.array(ids))
+            seg_ids = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
-            min_id = numpy.min(s)
-            max_id = numpy.max(s)
+            min_id = numpy.min(seg_ids)
+            max_id = numpy.max(seg_ids)
             if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
                 msg = msg.format(self.min_id)
@@ -428,34 +438,31 @@ class Segments(object):
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.ids
+            seg_ids = self.ids
 
-        # Initialise a dictionary to hold the max value per segment
-        max_seg = {}
+        # get a list of the segment id's that contain data
+        segment_ids = [i for i in seg_ids if hist[i] != 0]
+
+        # initialise the output array
+        dtype = numpy.dtype([('Segment_IDs', numpy.int),
+                             ('Max', numpy.float)])
+        max_seg = numpy.zeros(len(segment_ids), dtype=dtype)
 
         # Calculate the max value per segment
         # Do we check for the presence of NaN's
         if nan:
-            for i in s:
-                if hist[i] == 0:
-                    continue
-                mx_ = numpy.nanmax(arr_flat[ri[ri[i]:ri[i+1]]])
-                max_seg[i] = mx_
+            for i, seg in enumerate(segment_ids):
+                mx_ = numpy.nanmax(arr_flat[ri[ri[seg]:ri[seg+1]]])
+                max_seg['Segment_IDs'][i] = seg
+                max_seg['Max'][i] = mx_
         else:
-            for i in s:
-                if hist[i] == 0:
-                    continue
-                mx_ = numpy.max(arr_flat[ri[ri[i]:ri[i+1]]])
-                max_seg[i] = mx_
+            for i, seg in enumerate(segment_ids):
+                mx_ = numpy.max(arr_flat[ri[ri[seg]:ri[seg+1]]])
+                max_seg['Segment_IDs'][i] = seg
+                max_seg['Max'][i] = mx_
 
-        if dataframe:
-            cols = ['Segment_IDs', 'Max']
-            df = pandas.DataFrame(columns=cols, index=max_seg.keys())
-            df['Max'] = pandas.DataFrame.from_dict(max_seg, orient='index')
-
-            # Set the segment ids column and reset the index
-            df['Segment_IDs'] = df.index
-            df.reset_index(drop=True, inplace=True)
+        if PANDAS and dataframe:
+            df = pandas.DataFrame(max_seg)
             return df
         else:
             return max_seg
@@ -484,10 +491,13 @@ class Segments(object):
 
         :return:
             If `dataframe` is set to `True`, then a `pandas.DataFrame`
-            will be returned. Otherwise a dictionary where each key
-            corresponds to a segment ID, and each value is the minimum
-            value for that segment ID.
+            will be returned. Otherwise a compound `NumPy` datatype
+            array will be returned.
         """
+        # can't return a dataframe if pandas isn't available
+        if not PANDAS:
+            dataframe = False
+
         arr_flat = array.ravel()
         hist = self.histogram
         ri = self.ri
@@ -498,12 +508,12 @@ class Segments(object):
                 raise TypeError(msg)
 
             # Get a unique listing of the ids
-            s = numpy.unique(numpy.array(ids))
+            seg_ids = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
-            min_id = numpy.min(s)
-            max_id = numpy.max(s)
+            min_id = numpy.min(seg_ids)
+            max_id = numpy.max(seg_ids)
             if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
                 msg = msg.format(self.min_id)
@@ -514,34 +524,31 @@ class Segments(object):
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.ids
+            seg_ids = self.ids
 
-        # Initialise a dictionary to hold the min value per segment
-        min_seg = {}
+        # get a list of the segment id's that contain data
+        segment_ids = [i for i in seg_ids if hist[i] != 0]
+
+        # initialise the output array
+        dtype = numpy.dtype([('Segment_IDs', numpy.int),
+                             ('Min', numpy.float)])
+        min_seg = numpy.zeros(len(segment_ids), dtype=dtype)
 
         # Calculate the min value per segment
         # Do we check for the presence of NaN's
         if nan:
-            for i in s:
-                if hist[i] == 0:
-                    continue
-                mn_ = numpy.nanmin(arr_flat[ri[ri[i]:ri[i+1]]])
-                min_seg[i] = mn_
+            for i, seg in enumerate(segment_ids):
+                mn_ = numpy.nanmin(arr_flat[ri[ri[seg]:ri[seg+1]]])
+                min_seg['Segment_IDs'][i] = seg
+                min_seg['Min'][i] = mn_
         else:
-            for i in s:
-                if hist[i] == 0:
-                    continue
-                mn_ = numpy.min(arr_flat[ri[ri[i]:ri[i+1]]])
-                min_seg[i] = mn_
+            for i, seg in enumerate(segment_ids):
+                mn_ = numpy.min(arr_flat[ri[ri[seg]:ri[seg+1]]])
+                min_seg['Segment_IDs'][i] = seg
+                min_seg['Min'][i] = mn_
 
-        if dataframe:
-            cols = ['Segment_IDs', 'Min']
-            df = pandas.DataFrame(columns=cols, index=min_seg.keys())
-            df['Min'] = pandas.DataFrame.from_dict(min_seg, orient='index')
-
-            # Set the segment ids column and reset the index
-            df['Segment_IDs'] = df.index
-            df.reset_index(drop=True, inplace=True)
+        if PANDAS and dataframe:
+            df = pandas.DataFrame(min_seg)
             return df
         else:
             return min_seg
@@ -577,10 +584,13 @@ class Segments(object):
 
         :return:
             If `dataframe` is set to `True`, then a `pandas.DataFrame`
-            will be returned. Otherwise a dictionary where each key
-            corresponds to a segment ID, and each value is the
-            standard deviation for that segment ID.
+            will be returned. Otherwise a compound `NumPy` datatype
+            array will be returned.
         """
+        # can't return a dataframe if pandas isn't available
+        if not PANDAS:
+            dataframe = False
+
         arr_flat = array.ravel()
         hist = self.histogram
         ri = self.ri
@@ -591,12 +601,12 @@ class Segments(object):
                 raise TypeError(msg)
 
             # Get a unique listing of the ids
-            s = numpy.unique(numpy.array(ids))
+            seg_ids = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
-            min_id = numpy.min(s)
-            max_id = numpy.max(s)
+            min_id = numpy.min(seg_ids)
+            max_id = numpy.max(seg_ids)
             if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
                 msg = msg.format(self.min_id)
@@ -607,35 +617,32 @@ class Segments(object):
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.ids
+            seg_ids = self.ids
 
-        # Initialise a dictionary to hold the std dev value per segment
-        stddev_seg = {}
+        # get a list of the segment id's that contain data
+        segment_ids = [i for i in seg_ids if hist[i] != 0]
+
+        # initialise the output array
+        dtype = numpy.dtype([('Segment_IDs', numpy.int),
+                             ('StdDev', numpy.float)])
+        stddev_seg = numpy.zeros(len(segment_ids), dtype=dtype)
 
         # Calculate the stddev value per segment
         # Do we check for the presence of NaN's
         if nan:
-            for i in s:
-                if hist[i] == 0:
-                    continue
-                stddev = numpy.nanstd(arr_flat[ri[ri[i]:ri[i+1]]], ddof=ddof)
-                stddev_seg[i] = stddev
+            for i, seg in enumerate(segment_ids):
+                stddev = numpy.nanstd(arr_flat[ri[ri[seg]:ri[seg+1]]],
+                                      ddof=ddof)
+                stddev_seg['Segment_IDs'][i] = seg
+                stddev_seg['StdDev'][i] = stddev
         else:
-            for i in s:
-                if hist[i] == 0:
-                    continue
-                stddev = numpy.std(arr_flat[ri[ri[i]:ri[i+1]]], ddof=ddof)
-                stddev_seg[i] = stddev
+            for i, seg in enumerate(segment_ids):
+                stddev = numpy.std(arr_flat[ri[ri[seg]:ri[seg+1]]], ddof=ddof)
+                stddev_seg['Segment_IDs'][i] = seg
+                stddev_seg['StdDev'][i] = stddev
 
-        if dataframe:
-            cols = ['Segment_IDs', 'StdDev']
-            df = pandas.DataFrame(columns=cols, index=stddev_seg.keys())
-            df['StdDev'] = pandas.DataFrame.from_dict(stddev_seg,
-                                                      orient='index')
-
-            # Set the segment ids column and reset the index
-            df['Segment_IDs'] = df.index
-            df.reset_index(drop=True, inplace=True)
+        if PANDAS and dataframe:
+            df = pandas.DataFrame(stddev_seg)
             return df
         else:
             return stddev_seg
@@ -660,10 +667,13 @@ class Segments(object):
 
         :return:
             If `dataframe` is set to `True`, then a `pandas.DataFrame`
-            will be returned. Otherwise a dictionary where each key
-            corresponds to a segment ID, and each value is the area
-            for that segment ID.
+            will be returned. Otherwise a compound `NumPy` datatype
+            array will be returned.
         """
+        # can't return a dataframe if pandas isn't available
+        if not PANDAS:
+            dataframe = False
+
         hist = self.histogram
 
         if ids:
@@ -672,12 +682,12 @@ class Segments(object):
                 raise TypeError(msg)
 
             # Get a unique listing of the ids
-            s = numpy.unique(numpy.array(ids))
+            seg_ids = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
-            min_id = numpy.min(s)
-            max_id = numpy.max(s)
+            min_id = numpy.min(seg_ids)
+            max_id = numpy.max(seg_ids)
             if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
                 msg = msg.format(self.min_id)
@@ -688,22 +698,22 @@ class Segments(object):
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.ids
+            seg_ids = self.ids
 
-        # Initialise a dictionary to hold the area value per segment
-        area_seg = {}
+        # get a list of the segment id's that contain data
+        segment_ids = [i for i in seg_ids if hist[i] != 0]
 
-        for i in s:
-            area_seg[i] = hist[i] * scale_factor
+        # initialise the output array
+        dtype = numpy.dtype([('Segment_IDs', numpy.int),
+                             ('Area', numpy.float)])
+        area_seg = numpy.zeros(len(seg_ids), dtype=dtype)
 
-        if dataframe:
-            cols = ['Segment_IDs', 'Area']
-            df = pandas.DataFrame(columns=cols, index=area_seg.keys())
-            df['Area'] = pandas.DataFrame.from_dict(area_seg, orient='index')
+        for i in seg_ids:
+            area_seg['Segment_IDs'][i] = i
+            area_seg'Area'][i] = hist[i] * scale_factor
 
-            # Set the segment ids column and reset the index
-            df['Segment_IDs'] = df.index
-            df.reset_index(drop=True, inplace=True)
+        if PANDAS and dataframe:
+            df = pandas.DataFrame(area_seg)
             return df
         else:
             return area_seg
@@ -831,12 +841,12 @@ class Segments(object):
                 raise TypeError(msg)
 
             # Get a unique listing of the ids
-            s = numpy.unique(numpy.array(ids))
+            seg_ids = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
-            min_id = numpy.min(s)
-            max_id = numpy.max(s)
+            min_id = numpy.min(seg_ids)
+            max_id = numpy.max(seg_ids)
             if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
                 msg = msg.format(self.min_id)
@@ -847,15 +857,16 @@ class Segments(object):
                 raise Exception(msg)
         else:
             # Create an index to loop over every segment
-            s = self.ids
+            seg_ids = self.ids
 
         # Initialise a dictionary to hold the bounding box per segment
         yx_start_end_seg = {}
 
+        # get a list of the segment id's that contain data
+        segment_ids = [i for i in seg_ids if hist[i] != 0]
+
         # Find the minimum bounding box per segment
-        for i in s:
-            if hist[i] == 0:
-                continue
+        for i in segment_ids:
             idx = ri[ri[i]:ri[i+1]]
             idx = numpy.array(array_indices(self.dims, idx, dimensions=True))
             min_yx = numpy.min(idx, axis=1)
@@ -900,9 +911,14 @@ class Segments(object):
             during the standard deviation calculation. Default is False.
 
         :return:
-            A `pandas.DataFrame` with each column containing a single
-            statistical measure for all segments.
+            If `dataframe` is set to `True`, then a `pandas.DataFrame`
+            will be returned. Otherwise a compound `NumPy` datatype
+            array will be returned.
         """
+        # can't return a dataframe if pandas isn't available
+        if not PANDAS:
+            dataframe = False
+
         arr_flat = array.ravel()
         hist = self.histogram
         ri = self.ri
@@ -913,12 +929,12 @@ class Segments(object):
                 raise TypeError(msg)
 
             # Get a unique listing of the ids
-            s = numpy.unique(numpy.array(ids))
+            seg_ids = numpy.unique(numpy.array(ids))
 
             # Evaluate the min and max to determine if we are outside the valid
             # segment range
-            min_id = numpy.min(s)
-            max_id = numpy.max(s)
+            min_id = numpy.min(seg_ids)
+            max_id = numpy.max(seg_ids)
             if min_id < self.min_id:
                 msg = "The minimum segment ID in the dataset is {}"
                 msg = msg.format(self.min_id)
@@ -928,7 +944,7 @@ class Segments(object):
                 msg = msg.format(self.max_id)
                 raise Exception(msg)
         else:
-            s = self.ids
+            seg_ids = self.ids
 
         # Define the nan/non-nan function mapping
         mean_ = {True: numpy.nanmean, False: numpy.mean}
@@ -937,41 +953,36 @@ class Segments(object):
         stddev_ = {True: numpy.nanstd, False: numpy.std}
         total_ = {True: numpy.nansum, False: numpy.sum}
 
-        # Initialise a dictionary to hold the stats per segment
-        stats = {}
-        stats['Mean'] = {}
-        stats['Max'] = {}
-        stats['Min'] = {}
-        stats['StdDev'] = {}
-        stats['Total'] = {}
-        stats['Area'] = {}
+        # get a list of the segment id's that contain data
+        segment_ids = [i for i in seg_ids if hist[i] != 0]
+
+        # initialise the output array
+        dtype = numpy.dtype([('Segment_IDs', numpy.int),
+                             ('Mean', numpy.float),
+                             ('Max', numpy.float),
+                             ('Min', numpy.float),
+                             ('StdDev', numpy.float),
+                             ('Total', numpy.float),
+                             ('Area', numpy.float)])
+        stats = numpy.zeros(len(segment_ids), dtype=dtype)
 
         # Find the stats per segment
-        for i in s:
-            if hist[i] == 0:
-                continue
-            idx = ri[ri[i]:ri[i+1]]
+        for i, seg in enumerate(segment_ids):
+            idx = ri[ri[seg]:ri[seg+1]]
             data = arr_flat[idx]
+            stats['Segment_IDs'][i] = seg
             stats['Mean'][i] = mean_[nan](data)
             stats['Max'][i] = max_[nan](data)
             stats['Min'][i] = min_[nan](data)
             stats['StdDev'][i] = stddev_[nan](data, ddof=ddof)
             stats['Total'][i] = total_[nan](data)
-            stats['Area'][i] = hist[i] * scale_factor
+            stats['Area'][i] = hist[seg] * scale_factor
 
-        # Define the output dataframe
-        cols = ['Segment_IDs', 'Mean', 'Max', 'Min', 'StdDev', 'Total', 'Area']
-        df = pandas.DataFrame(columns=cols, index=stats['Mean'].keys())
-
-        # Insert the stats results
-        for key in stats:
-            df[key] = pandas.DataFrame.from_dict(stats[key], orient='index')
-
-        # Set the segment ids column and reset the index
-        df['Segment_IDs'] = df.index
-        df.reset_index(drop=True, inplace=True)
-
-        return df
+        if dataframe and PANDAS:
+            df = pandas.DataFrame(stats)
+            return df
+        else:
+            return stats
 
 
 def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
