@@ -37,7 +37,7 @@ def data_convert(scalar, dtype):
 def calculate_binsize(array, minv=None, maxv=None, nbins=256):
     """
     Calculates the binsize given a number of bins. The binsize is
-    calculated as ceiling((maxv - minv) / (nbins -1)).
+    calculated as ceiling((maxv - minv) / (nbins - 1.0)).
 
     :param array:
         A numpy array used for determining the Maximum and Minimum
@@ -74,13 +74,13 @@ def calculate_binsize(array, minv=None, maxv=None, nbins=256):
     maxv = data_convert(maxv, array.dtype.name)
 
     # ENVI appears to ceil the result
-    binsize = numpy.ceil((maxv - minv) / (nbins - 1))
+    binsize = numpy.ceil((maxv - minv) / (nbins - 1.0))
 
     return binsize, minv, maxv
 
 
 def linear_percent(array, percent=2, minv=None, maxv=None, nbins=256,
-                   top=None):
+                   top=255):
     """
     Applies a linear contrast enhancement with cutoff values given by
     percent. The default is 2% which means that the 2nd and 98th
@@ -121,7 +121,7 @@ def linear_percent(array, percent=2, minv=None, maxv=None, nbins=256,
     return stretch
 
 
-def equalisation(array, minv=None, maxv=None, nbins=256, top=None):
+def equalisation(array, minv=None, maxv=None, nbins=256, top=255):
     """
     Converts a numpy array to a histogram equalised byte array.
 
@@ -156,7 +156,7 @@ def equalisation(array, minv=None, maxv=None, nbins=256, top=None):
     return stretch
 
 
-def square_root(array, minv=None, maxv=None, nbins=256, top=None):
+def square_root(array, minv=None, maxv=None, nbins=256, top=255):
     """
     A square root contrast enhancement.
 
@@ -193,7 +193,7 @@ def square_root(array, minv=None, maxv=None, nbins=256, top=None):
     bfcn = bytscl(fcn, top=top)
 
     # Get the desired binsize
-    binsize, minv, maxvV = calculate_binsize(array, minv=minv, maxv=maxv,
+    binsize, minv, maxv = calculate_binsize(array, minv=minv, maxv=maxv,
                                              nbins=nbins)
 
     # Clip the array to the min and max
@@ -214,7 +214,7 @@ def gauss():
     """
 
 
-def log(array, minv=None, maxv=None, nbins=256, top=None):
+def log(array, minv=None, maxv=None, nbins=256, top=255):
     """
     A natural logarithmic contrast enhancement.
 
@@ -249,11 +249,11 @@ def log(array, minv=None, maxv=None, nbins=256, top=None):
     bfcn = bytscl(fcn, top=top)
 
     # Get the desired binsize
-    binsize, minv, maxvV = calculate_binsize(array, minv=minv, maxv=maxv,
+    binsize, minv, maxv = calculate_binsize(array, minv=minv, maxv=maxv,
                                              nbins=nbins)
 
     # Clip the array to the min and max
-    array = array.clip(min=minv, max=maxvV)
+    array = array.clip(min=minv, max=maxv)
 
     # Scale to integers
     array = numpy.floor((array - minv) / binsize).astype('int')
