@@ -22,10 +22,12 @@ Segmentation analysis example
 
 ```python
 import numpy
+from scipy import ndimage
 from image_processing.segmentation import Segments
 
 dims = (1000, 1000)
-class_data = numpy.random.randint(0, 256, dims)
+class_data = numpy.random.randint(0, 10001, dims)
+nlabels = ndimage.label(class_data > 5000, output=class_data)
 seg = Segments(class_data)
 
 data = numpy.random.randf(dims)
