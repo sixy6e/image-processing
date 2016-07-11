@@ -30,7 +30,7 @@ class_data = numpy.random.randint(0, 10001, dims)
 nlabels = ndimage.label(class_data > 5000, output=class_data)
 seg = Segments(class_data)
 
-data = numpy.random.randf(dims)
+data = numpy.random.ranf(dims)
 
 # pandas DataFrame example
 stats = seg.basic_statistics(data, dataframe=True)
@@ -69,14 +69,14 @@ from image_processing import contrast
 dims = (1000, 1000)
 data = numpy.random.ranf(dims)
 
-lp3 = contrast.linear_percent(data, percent=3)
+lp = contrast.linear_percent(data, percent=3)
 lg = contrast.log(data)
 sq = contrast.square_root(data)
 eq = contrast.equalisation(data)
 
 fig = plt.figure()
 fig.add_subplot(221)
-plt.title('Linear 2%')
+plt.title('Linear 3%')
 plt.imshow(lp)
 fig.add_subplot(222)
 plt.title('Log')
