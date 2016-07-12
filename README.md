@@ -52,7 +52,7 @@ print seg_data
 seg.sieve(10)
 print "Number of segments: {}".format(seg.n_segments)
 
-# remove segments containing > 30 pixels
+# remove segments containing < 30 pixels
 seg.sieve(30)
 print "Number of segments: {}".format(seg.n_segments)
 ```
