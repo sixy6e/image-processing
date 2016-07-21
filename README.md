@@ -62,17 +62,24 @@ Contrast enhancement example
 ----------------------------
 
 ```python
-import numpy
 import matplotlib.pyplot as plt
+from geoh5 import kea
 from image_processing import contrast
 
-dims = (1000, 1000)
-data = numpy.random.ranf(dims)
+with kea.open('LS5-2008-02-25.kea') as src:
+    data = src.read([5,4,2])
 
-lp = contrast.linear_percent(data, percent=3)
-lg = contrast.log(data)
-sq = contrast.square_root(data)
-eq = contrast.equalisation(data)
+# alternatively if GDAL is built with support for the KEA format
+# with rasterio.open('LS5-2008-02-25.kea') as src:
+#     data = src.read([5,4,2])
+
+# transpose to display RGB with matplotlib
+data = data.transpose(1,2,0)
+
+lp = contrast.linear_percent(data, percent=3, minv=0)
+lg = contrast.log(data, minv=0)
+sq = contrast.square_root(data, minv=0)
+eq = contrast.equalisation(data, minv=0)
 
 fig = plt.figure()
 fig.add_subplot(221)
@@ -89,3 +96,6 @@ plt.title('Equalisation')
 plt.imshow(eq)
 plt.show()
 ```
+
+which outputs...
+![Contrast enhancement](/images/contrast-example.png)
