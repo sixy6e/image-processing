@@ -1052,7 +1052,7 @@ def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
             r_bounds = (min_x, min_y, max_x, max_y)
 
         # rasterio has a CRS class that makes for easier crs comparison
-	if CLASS_CRS:
+	if CRS_CLASS:
             v_crs = CRS(v_src.crs)
 	    same_crs = v_crs == crs
             # fiona may update to the class crs in future, but for now...
