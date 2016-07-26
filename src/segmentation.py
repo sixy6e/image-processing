@@ -38,8 +38,14 @@ except ImportError:
     PANDAS = False
 
 import rasterio
-from rasterio.crs import CRS
 from rasterio.features import rasterize
+# rasterio < 0.36 doesn't have the CRS class object
+try:
+    from rasterio.crs import CRS
+    CRS_CLASS = True
+except ImportError:
+    from rasterio.crs import is_same_crs
+    CRS_CLASS = False
 
 # check for rtree
 try:
@@ -1046,7 +1052,13 @@ def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
             r_bounds = (min_x, min_y, max_x, max_y)
 
         # rasterio has a CRS class that makes for easier crs comparison
-        v_crs = CRS(v_src.crs)
+	if CLASS_CRS:
+            v_crs = CRS(v_src.crs)
+	    same_crs = v_crs == crs
+            # fiona may update to the class crs in future, but for now...
+	    crs = crs.to_dict()
+	else:
+	    same_crs = is_same_crs(v_src.crs, crs)
 
         # use rtree where possible for speedy shape reduction
         if RTREE:
@@ -1054,9 +1066,7 @@ def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
             index = rtree.index.Index()
 
             # get crs, check if the same as the image and project as needed
-            if not v_crs == crs:
-                # fiona may update to the class crs...
-                crs = crs.to_dict()
+            if not same_crs:
                 for feat in v_src:
                     new_geom = transform_geom(v_src.crs, crs, feat['geometry'])
                     fid = int(feat['id'])
@@ -1077,9 +1087,7 @@ def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
         else:
             selected_shapes = []
             r_poly = box(*r_bounds)
-            if not v_crs == crs:
-                # fiona may update to the class crs...
-                crs = crs.to_dict()
+            if not same_crs:
                 for feat in v_src:
                     new_geom = transform_geom(v_src.crs, crs, feat['geometry'])
                     fid = int(feat['id'])
