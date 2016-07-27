@@ -889,7 +889,8 @@ class Segments(object):
 
 
     def basic_statistics(self, array, ids=None, ddof=1,
-                         scale_factor=1.0, nan=False, dataframe=False):
+                         scale_factor=1.0, nan=False, dataframe=False,
+                         label=None):
         """
         Calculates the basic statistics per segment given an
         array containing data. Statistical measures calculated are:
@@ -925,6 +926,11 @@ class Segments(object):
             A boolean indicating the return type. If set to True, then
             a `pandas.DataFrame` structure will be returned. Default is
             to return a dictionary with the `segment ids's` as the keys.
+
+        :param label:
+            A `string` to define the label that will be used to prepend
+            each statistic, eg 'NIR' will yield 'NIR_Mean', 'NIR_Max' etc.
+            Default is None which yeilds 'Mean', 'Max' etc.
 
         :return:
             If `dataframe` is set to `True`, then a `pandas.DataFrame`
@@ -993,6 +999,13 @@ class Segments(object):
             stats['StdDev'][i] = stddev_[nan](data, ddof=ddof)
             stats['Total'][i] = total_[nan](data)
             stats['Area'][i] = hist[seg] * scale_factor
+
+        if label is not None:
+            nm = '{}_{}'
+            dnames = stats.dtype.names
+            names = [nm.format(label, i) for i in dnames if i != 'Segment_IDs']
+            names.insert(0, 'Segment_IDs')
+            stats.dtype.names = tuple(names)
 
         if dataframe and PANDAS:
             df = pandas.DataFrame(stats)
