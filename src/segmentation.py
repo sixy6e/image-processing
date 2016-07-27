@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import fiona
 from fiona.transform import transform_geom
+import osr
 import numpy
 
 # check for pandas
@@ -44,7 +45,7 @@ try:
     from rasterio.crs import CRS
     CRS_CLASS = True
 except ImportError:
-    from rasterio.crs import is_same_crs
+    from rasterio.crs import is_same_crs, from_string
     CRS_CLASS = False
 
 # check for rtree
@@ -1021,7 +1022,7 @@ def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
         will be retrieved via the `raster_filename`.
 
     :param crs:
-        Optional. If provided, then a Proj4 styled dictionary. If
+        Optional. If provided, then WKT should be provided. If
         omitted, then `crs` will be retreived via the
         `raster_filename`.
 
@@ -1050,6 +1051,14 @@ def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
             min_x, max_x = min(ul[0], lr[0]), max(ul[0], lr[0])
             min_y, max_y = min(ul[1], lr[1]), max(ul[1], lr[1])
             r_bounds = (min_x, min_y, max_x, max_y)
+
+            # convert the crs_wkt to a dict styled proj4
+            sr = osr.SpatialReference()
+            sr.ImportFromWkt(crs)
+            if CRS_CLASS:
+                crs = CRS.from_string(sr.ExportToProj4())
+            else:
+                crs = from_string(sr.ExportToProj4())
 
         # rasterio has a CRS class that makes for easier crs comparison
 	if CRS_CLASS:
