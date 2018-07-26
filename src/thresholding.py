@@ -80,15 +80,10 @@ def otsu_threshold(image, binsize=None, maxv=None, minv=None, nbins=None,
         http://en.wikipedia.org/wiki/Otsu's_method
 
     """
-    if image == None:
-        print 'No input image!!!'
-        return None
-
     dims = image.shape
     if (len(dims) > 3):
         msg = 'Incorrect shape!; image must be 2 or 3 dimensions.'
-        print msg
-        return None
+        raise Exception(msg)
 
     if fast:
         if (len(dims) == 3):
