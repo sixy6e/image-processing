@@ -719,9 +719,9 @@ class Segments(object):
                              ('Area', numpy.float)])
         area_seg = numpy.zeros(len(seg_ids), dtype=dtype)
 
-        for i in seg_ids:
-            area_seg['Segment_IDs'][i] = i
-            area_seg['Area'][i] = hist[i] * scale_factor
+        for i, seg in enumerate(seg_ids):
+            area_seg['Segment_IDs'][i] = seg
+            area_seg['Area'][i] = hist[seg] * scale_factor
 
         if PANDAS and dataframe:
             df = pandas.DataFrame(area_seg)
