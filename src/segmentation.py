@@ -1074,13 +1074,13 @@ def rasterise_vector(vector_filename, shape=None, transform=None, crs=None,
                 crs = from_string(sr.ExportToProj4())
 
         # rasterio has a CRS class that makes for easier crs comparison
-	if CRS_CLASS:
+        if CRS_CLASS:
             v_crs = CRS(v_src.crs)
-	    same_crs = v_crs == crs
+            same_crs = v_crs == crs
             # fiona may update to the class crs in future, but for now...
-	    crs = crs.to_dict()
-	else:
-	    same_crs = is_same_crs(v_src.crs, crs)
+            crs = crs.to_dict()
+        else:
+            same_crs = is_same_crs(v_src.crs, crs)
 
         # use rtree where possible for speedy shape reduction
         if RTREE:
